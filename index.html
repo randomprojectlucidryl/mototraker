@@ -66,6 +66,10 @@ ul{padding-left:18px}li{margin:7px 0;font-size:15px}
 .kv{font-size:13px;color:var(--mute)}.kv b{display:block;color:var(--ink);font:600 16px Barlow,sans-serif;margin-top:2px}
 .account{margin-top:14px}.account p{margin:6px 0}.account details{margin-top:10px}.account-status{font-size:14px;margin-top:8px}.account-status.error{color:var(--acc)}.account-status.synced{color:var(--ok)}
 .account-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.account-actions button{margin:0}
+footer.sync-footer{max-width:620px;margin:0 auto;padding:0 16px 18px}
+footer.sync-footer .account{margin-top:10px}
+footer.sync-footer .card{margin-bottom:0}
+footer.sync-footer[hidden]{display:none}
 body:not(.authenticated){padding-top:max(24px,10vh)}
 body:not(.authenticated) header,body:not(.authenticated) nav{display:none}
 body:not(.authenticated) main{max-width:460px}
@@ -75,6 +79,7 @@ body:not(.authenticated) .account{margin-top:0}
 <body>
 <header><div class="hd"><small id="hSub">Hero Xpulse 200 4V</small><div class="odo"><b id="odoH">0</b><span>km</span></div></div></header>
 <main><section id="account" class="account" aria-live="polite"></section><section id="v"></section></main>
+<footer id="syncFooter" class="sync-footer" hidden><section id="accountFooter" class="account" aria-live="polite"></section></footer>
 <nav><div id="nav"></div></nav>
 <script>
 const KEY='xpulse-tracker-v2';
@@ -201,7 +206,11 @@ async function loadCloudData(){
   cloud.revision++;await syncNow();render()
  }catch(e){cloud.loaded=false;cloud.status='error';cloud.message='No se pudieron cargar los datos de Supabase: '+e.message;renderAccount();throw e}}
 function renderAccount(){
- const el=$('#account');if(!el)return;
+ const authenticated=Boolean(cloud.session&&cloud.loaded),el=$(authenticated?'#accountFooter':'#account');
+ if(!el)return;
+ const alternate=$(authenticated?'#account':'#accountFooter');
+ if(alternate)alternate.innerHTML='';
+ const footer=$('#syncFooter');if(footer)footer.hidden=!authenticated;
  const notice=`<p id="cloudStatus" class="account-status ${esc(cloud.status)}" role="status">${esc(cloud.message||'Los cambios se guardan en este dispositivo.')}</p>`;
  const configForm=`<label for="supabaseUrl">URL del proyecto Supabase</label><input id="supabaseUrl" type="url" placeholder="https://tu-proyecto.supabase.co" value="${esc(cloud.config.url||'')}">
  <label for="supabaseKey">Clave anon / publishable</label><input id="supabaseKey" type="password" autocomplete="off" placeholder="sb_publishable_… o anon key" value="${esc(cloud.config.anonKey||'')}">
