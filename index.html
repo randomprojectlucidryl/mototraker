@@ -3,8 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Xpulse 200 4V · Moto-Tracker</title>
+<title>MotoTraker · Xpulse 200 4V</title>
+<meta name="application-name" content="MotoTraker">
 <meta name="theme-color" content="#141414">
+<link rel="icon" type="image/svg+xml" href="icono.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
@@ -16,6 +18,9 @@ body{padding:env(safe-area-inset-top) 0 calc(72px + env(safe-area-inset-bottom))
 main{max-width:620px;margin:0 auto;padding:0 16px 24px}
 header{background:var(--ink);color:#fff;padding:20px 16px 22px}
 .hd{max-width:620px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.brand img{width:42px;height:42px;object-fit:contain;background:#fff;border-radius:8px;padding:3px}
+.brand h1{font-size:22px;font-weight:700;line-height:1.2}
 .hd small{color:#B8B8B8;font-size:13px}
 .odo{display:flex;align-items:baseline;gap:8px;margin-top:4px}
 .odo b{font:700 64px/1 "Open Sans",sans-serif;letter-spacing:.01em;font-variant-numeric:tabular-nums}
@@ -77,7 +82,7 @@ body:not(.authenticated) .account{margin-top:0}
 </style>
 </head>
 <body>
-<header><div class="hd"><small id="hSub">Hero Xpulse 200 4V</small><div class="odo"><b id="odoH">0</b><span>km</span></div></div></header>
+<header><div class="hd"><div class="brand"><img src="icono.svg" alt=""><h1>MotoTraker</h1></div><small id="hSub">Hero Xpulse 200 4V</small><div class="odo"><b id="odoH">0</b><span>km</span></div></div></header>
 <main><section id="account" class="account" aria-live="polite"></section><section id="v"></section></main>
 <footer id="syncFooter" class="sync-footer" hidden><section id="accountFooter" class="account" aria-live="polite"></section></footer>
 <nav><div id="nav"></div></nav>
@@ -218,7 +223,7 @@ function renderAccount(){
  if(!cloud.config.url||!cloud.config.anonKey){el.innerHTML=`<div class="card"><div class="row"><span class="n">Acceso no configurado</span><span class="tag c-prev">CONFIGURACIÓN</span></div><p class="sub">Configura Supabase para iniciar sesión y acceder a la aplicación.</p>${configForm}${notice}</div>`;return}
  const settings=`<details><summary class="sub">Configuración del proyecto</summary>${configForm}</details>`;
  if(!cloud.session){el.innerHTML=`<div class="card"><div class="row"><span class="n">Cuenta compartida</span><span class="tag c-prev">SIN SESIÓN</span></div>
-  <p class="sub">Inicia sesión para acceder a Moto-Tracker.</p>
+  <p class="sub">Inicia sesión para acceder a MotoTraker.</p>
   <form onsubmit="accountAuth();return false">
    <label for="accountEmail">Correo electrónico</label><input id="accountEmail" type="email" autocomplete="username" value="${LOGIN_EMAIL}" readonly>
    <label for="accountPassword">Contraseña</label><input id="accountPassword" type="password" autocomplete="current-password" required>
