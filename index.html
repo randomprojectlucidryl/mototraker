@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Xpulse 200 4V · Moto-Tracker</title>
+<meta name="theme-color" content="#13202B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#E8ECEE;--sf:#F7F9FA;--ink:#13202B;--mute:#5B6B78;--line:#CBD3D9;--acc:#E2431F;--ok:#2F7D5B;--warn:#B77A06;--r:10px}
+*{box-sizing:border-box;margin:0}
+html,body{background:var(--bg);color:var(--ink);font:400 16px/1.45 Barlow,system-ui,sans-serif}
+body{padding:env(safe-area-inset-top) 0 calc(72px + env(safe-area-inset-bottom))}
+main{max-width:620px;margin:0 auto;padding:0 16px 24px}
+header{background:var(--ink);color:#fff;padding:20px 16px 22px}
+.hd{max-width:620px;margin:0 auto}
+.hd small{color:#9FB0BD;font-size:13px}
+.odo{display:flex;align-items:baseline;gap:8px;margin-top:4px}
+.odo b{font:700 64px/1 'Barlow Condensed',sans-serif;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.odo span{color:#9FB0BD;font:600 20px 'Barlow Condensed',sans-serif}
+h2{font:700 26px 'Barlow Condensed',sans-serif;margin:22px 0 10px}
+.card{background:var(--sf);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.n{font-weight:600}
+.tag{font:700 13px 'Barlow Condensed',sans-serif;letter-spacing:.04em}
+.c-crit{color:var(--acc)}.c-prev{color:var(--warn)}.c-info{color:var(--ok)}
+.bar{height:8px;background:#DDE3E7;border-radius:4px;margin:10px 0 6px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:4px;background:var(--ok)}
+.bar i.prev{background:var(--warn)}.bar i.crit{background:var(--acc)}
+.txt{font:13px ui-monospace,Menlo,monospace;color:var(--mute)}
+.sub{color:var(--mute);font-size:14px}
+label{display:block;font-size:14px;color:var(--mute);margin:12px 0 4px}
+input,select{width:100%;font:500 17px Barlow,sans-serif;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+button{font:600 17px Barlow,sans-serif;border:0;border-radius:8px;padding:13px 16px;background:var(--acc);color:#fff;width:100%;margin-top:16px;cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.sm{width:auto;margin:0;padding:6px 10px;font-size:14px}
+:focus-visible{outline:3px solid #2A6FDB;outline-offset:2px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--ink);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+nav div{display:flex;width:100%;max-width:620px}
+nav button{flex:1;min-width:0;margin:0;border-radius:0;background:none;color:#9FB0BD;padding:12px 2px;font-size:13px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button span{font-size:20px}
+nav button[aria-current=true]{color:#fff;box-shadow:inset 0 3px 0 var(--acc)}
+@media(max-width:360px){nav button{font-size:10px;padding:10px 0}nav button span{font-size:17px}}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.big{font:700 34px/1 'Barlow Condensed',sans-serif}
+.pills{display:flex;gap:8px;margin:14px 0 0}
+.pills div{flex:1;background:var(--sf);border:1px solid var(--line);border-radius:var(--r);padding:10px;text-align:center}
+.pills b{display:block;font:700 28px/1 'Barlow Condensed',sans-serif}
+.pills small{color:var(--mute);font-size:13px}
+.empty{color:var(--mute);padding:18px 4px;text-align:center}
+.spd{font:700 112px/1 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums;text-align:center}
+.spd small{font-size:26px;color:var(--mute);margin-left:6px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stats div{background:var(--sf);border:1px solid var(--line);border-radius:var(--r);padding:10px 6px;text-align:center}
+.stats b{display:block;font:700 30px/1.05 'Barlow Condensed',sans-serif;font-variant-numeric:tabular-nums}
+.stats small{color:var(--mute);font-size:13px}
+.gps{text-align:center;font-size:14px;min-height:22px;margin:8px 0}
+.live{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--acc);margin-right:6px}
+@media(prefers-reduced-motion:no-preference){.live{animation:pl 1.2s infinite}@keyframes pl{50%{opacity:.25}}}
+@media(prefers-reduced-motion:no-preference){.bar i{transition:width .5s}}
+h3{font:600 13px Barlow,sans-serif;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;margin:18px 0 8px}
+details.card summary{font-weight:600;cursor:pointer}details.card[open] summary{margin-bottom:4px}
+ul{padding-left:18px}li{margin:7px 0;font-size:15px}
+.kv{font-size:13px;color:var(--mute)}.kv b{display:block;color:var(--ink);font:600 16px Barlow,sans-serif;margin-top:2px}
+.account{margin-top:14px}.account p{margin:6px 0}.account details{margin-top:10px}.account-status{font-size:14px;margin-top:8px}.account-status.error{color:var(--acc)}.account-status.synced{color:var(--ok)}
+.account-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.account-actions button{margin:0}
+</style>
+</head>
+<body>
+<header><div class="hd"><small id="hSub">Hero Xpulse 200 4V</small><div class="odo"><b id="odoH">0</b><span>km</span></div></div></header>
+<main><section id="account" class="account" aria-live="polite"></section><section id="v"></section></main>
+<nav><div id="nav"></div></nav>
+<script>
+const KEY='xpulse-tracker-v2';
+const CLOUD_CONFIG_KEY='xpulse-tracker-supabase-config-v1',CLOUD_SESSION_KEY='xpulse-tracker-supabase-session-v1';
+const DEFAULT_CLOUD_CONFIG={url:'https://rtngtcwqrvdztptqhlbs.supabase.co',anonKey:'sb_publishable_RYhSVwyBdjfZcuARqE-OCA_iFUi6Es6'};
+const savedConfig=readStored(CLOUD_CONFIG_KEY,{});
+const cloud={config:Object.assign({},DEFAULT_CLOUD_CONFIG,savedConfig&&typeof savedConfig==='object'?savedConfig:{}),session:readStored(CLOUD_SESSION_KEY,null),status:'offline',message:'',loaded:false,revision:0,syncedRevision:0,timer:null,syncPromise:null,email:''};
+const G={mot:'Motor y lubricación',tra:'Transmisión',fre:'Frenos',rue:'Ruedas y chasis',ele:'Eléctrico y emisiones'};
+// [id, grupo, nombre, intervalo km, primer vencimiento km, días límite, nota] — fuente: manual del propietario
+const ITEMS=[
+['serv','mot','Servicio periódico en concesionario',3000,500,90,'Cada 3.000 km o 90 días, lo que ocurra primero. 1.er servicio entre 500 y 750 km.'],
+['aceite','mot','Aceite de motor: verificar nivel y rellenar',3000,null,0,'SAE 10W-30 SL MA2 (Hero Xotic+ PAO). Rellena si el nivel está cerca de la marca inferior.'],
+['aceite12','mot','Aceite de motor: cambio total',12000,500,0,'Primer cambio en el 1.er servicio; luego cada 12.000 km como máximo.'],
+['malla','mot','Malla del filtro de aceite, filtro centrífugo y tapón magnético',12000,500,0,'Limpiar en el 1.er servicio y en cada cambio de aceite.'],
+['aire','mot','Filtro de aire: limpieza',3000,null,0,'Más seguido en zonas polvorientas o húmedas.'],
+['aire12','mot','Filtro de aire: reemplazo',12000,null,0,'El manual indica reemplazo en 12.000 y 24.000 km.'],
+['bujia','mot','Bujía: inspección, limpieza y ajuste',3000,null,0,'Champion REK6YC · holgura 0,8–0,9 mm.'],
+['bujia15','mot','Bujía: reemplazo',15000,12000,0,'El manual indica reemplazo en 12.000 y 27.000 km.'],
+['valvulas','mot','Holgura de válvulas: inspección y ajuste',3000,null,0,'En frío: admisión 0,08 mm · escape 0,12 mm.'],
+['acel','mot','Líneas de combustible y operación del acelerador',3000,null,0,'Inspeccionar líneas y ajustar el acelerador.'],
+['cadena','tra','Cadena: inspeccionar, limpiar, lubricar y ajustar',700,null,0,'Holgura 30–35 mm. Torque de la tuerca del eje trasero: 6,8 kgf·m.'],
+['desliz','tra','Deslizador de la cadena de transmisión',3000,null,0,'Inspeccionar el desgaste.'],
+['embrague','tra','Juego libre de la palanca de embrague',3000,null,0,'Inspeccionar y ajustar.'],
+['frenos','fre','Frenos: pastillas y nivel de líquido',3000,null,0,'Cambia las pastillas al llegar a la marca de desgaste. DOT 4/DOT 3, sin mezclarlos.'],
+['liquido','fre','Líquido de frenos: reemplazo',30000,null,730,'Cada 2 años o 30.000 km, lo que ocurra primero.'],
+['pedal','fre','Pedal de freno: limpiar y lubricar',6000,3000,0,'Desde el 2.º servicio y luego cada 6.000 km.'],
+['llantas','rue','Llantas y radios: presión, desgaste y tensión',3000,null,0,'Los radios se aflojan en los primeros 1.000 km y tras uso todoterreno. Banda mínima 1,0 mm.'],
+['rodam','rue','Rodamientos de ruedas y dirección',3000,null,0,'Revisar juego; ajustar la dirección antes y después de uso todoterreno.'],
+['horquilla','rue','Suspensión delantera: aceite de horquilla',30000,null,730,'Inspeccionar en cada servicio; cambiar aceite cada 2 años o 30.000 km.'],
+['amort','rue','Suspensión trasera: bujes y amortiguador',3000,null,0,'Inspeccionar el juego de los bujes.'],
+['tuercas','rue','Tuercas, pernos y sujetadores',3000,null,0,'Inspeccionar y mantener el torque especificado.'],
+['bateria','ele','Batería, luces y soporte lateral',3000,null,0,'Batería 12V 6Ah ETZ-7 (libre de mantenimiento). Revisa voltaje, luz principal, luz de freno e interruptor del soporte.'],
+['emisiones','ele','Emisiones y sistema evaporativo (canister)',6000,6000,0,'Revisar CO en ralentí y las mangueras del canister.']
+].map(a=>({id:a[0],g:a[1],n:a[2],int:a[3],first:a[4],days:a[5],t:a[6]}));
+const SPECS=[
+['Fluidos y motor',[['aceite','Aceite de motor','Hero Xotic+ SAE 10W-30 SL MA2 (PAO)'],['aceiteCap','Capacidad de aceite','1.200 ml al drenar · 1.400 ml al desarmar'],['tank','Tanque de combustible (L)','13'],['frenoLiq','Líquido de frenos','DOT 4 / DOT 3 (no mezclar)'],['bujia','Bujía','Champion REK6YC'],['bujiaGap','Holgura de bujía','0,8–0,9 mm'],['valv','Holgura de válvulas (frío)','Adm. 0,08 mm · Esc. 0,12 mm'],['ralenti','Ralentí','1600 ± 100 r/min']]],
+['Ruedas y cadena',[['llantaD','Llanta delantera','90/90-21 54S'],['llantaT','Llanta trasera','120/80-18 62S'],['presD','Presión delantera','25 psi'],['presT','Presión trasera (solo)','33 psi'],['presTp','Presión trasera (con pasajero)','36 psi'],['cadena','Holgura de cadena','30–35 mm'],['banda','Banda de llanta mínima','1,0 mm'],['torqueEje','Torque tuerca eje trasero','6,8 kgf·m']]],
+['Eléctrico y chasis',[['bateria','Batería','12V 6 Ah (ETZ-7), libre de mantenimiento'],['fusibles','Fusibles','Principal 20 A · caja 10 A'],['alt','Alternador','135 W @ 5000 r/min'],['peso','Peso en vacío / carga útil','159 kg / 130 kg'],['discos','Discos de freno (del. / tras.)','276 mm / 220 mm'],['horq','Horquilla','Telescópica Ø 37 mm']]]];
+const DEF={};SPECS.forEach(g=>g[1].forEach(f=>DEF[f[0]]=f[2]));
+const BIKE=[['apodo','Apodo'],['model','Modelo'],['anio','Año modelo'],['color','Color'],['placa','Placa'],['chasis','No. de chasis (VIN)'],['motor','No. de motor'],['compra','Fecha de compra','date'],['taller','Concesionario / taller de confianza']];
+const ATT=['Servicio pago cada 3.000 km o 90 días (lo que ocurra primero). El 1.er servicio va entre 500 y 750 km.','Rodaje: durante los primeros 500 km evita arrancar a fondo y acelerar bruscamente.','Usa aceite Hero Xotic+ 10W-30 SL MA2 (PAO) y repuestos originales Hero.','Si ruedas con polvo, humedad, lluvia o todoterreno, haz el servicio con más frecuencia (filtro de aire y cadena).','Tras usar todoterreno revisa radios, rodamientos de dirección, cadena y posapiés.','Cadena cada 700 km: holgura de 30–35 mm.','No mezcles líquido de frenos DOT 3 y DOT 4.','Cambia las llantas cuando aparezca el indicador de desgaste (mínimo 1,0 mm).','Al retirar empaques, juntas tóricas, anillos de seguridad o pasadores, instala unos nuevos.','Seca bien la moto después de lavarla (paño limpio o aire a presión).','El motor no arranca con el acelerador a fondo: la ECU corta el combustible.'];
+const DOCS=[{id:'soat',n:'SOAT'},{id:'tecno',n:'Revisión tecnomecánica (CDA)'},{id:'todo',n:'Seguro todo riesgo'}];
+const NAV=[['estado','📊','Estado'],['ruta','🧭','Ruta'],['reg','🛠️','Reg.'],['docs','📄','Legal'],['fuel','⛽','Tanq.'],['cfg','🏍️','Moto']];
+const fresh=()=>{const items={};ITEMS.forEach(i=>items[i.id]={int:i.int,last:null,date:null});return{odo:0,items,hist:[],docs:{},fuel:[],trips:[],bike:{model:'Hero Xpulse 200 4V'},spec:{}}};
+function readStored(key,fallback){try{const value=localStorage.getItem(key);return value?JSON.parse(value):fallback}catch(e){console.error('No se pudo leer el almacenamiento local:',e);return fallback}}
+function normalizeState(s){const b=fresh();if(!s||typeof s!=='object')return b;
+ const m=Object.assign(b,s);m.items=Object.assign({},b.items,s.items||{});
+ Object.keys(b.items).forEach(id=>m.items[id]=Object.assign({},b.items[id],s.items&&s.items[id]||{}));
+ m.bike=Object.assign({},b.bike,s.bike||{});m.docs=s.docs&&typeof s.docs==='object'?s.docs:{};
+ m.spec=s.spec&&typeof s.spec==='object'?s.spec:{};m.hist=Array.isArray(s.hist)?s.hist:[];m.fuel=Array.isArray(s.fuel)?s.fuel:[];m.trips=Array.isArray(s.trips)?s.trips:[];m.odo=Number.isFinite(+s.odo)&&+s.odo>=0?+s.odo:0;return m}
+function mergeStates(remote,local){
+ const result=normalizeState(remote),source=normalizeState(local);result.odo=Math.max(result.odo,source.odo);
+ for(const item of ITEMS){const r=result.items[item.id],l=source.items[item.id];
+  if(l.last!=null&&(r.last==null||(l.date||'')>(r.date||'')||(l.date||'')===(r.date||'')&&l.last>r.last)){r.last=l.last;r.date=l.date}
+  if(l.int!==item.int)r.int=l.int}
+ const mergeList=(a,b,key)=>{const all=new Map();[...a,...b].forEach(x=>all.set(key(x),x));return[...all.values()]};
+ result.hist=mergeList(result.hist,source.hist,x=>JSON.stringify([x.d,x.id,x.km,x.cost||0])).sort((a,b)=>(a.d||'').localeCompare(b.d||''));
+ result.fuel=mergeList(result.fuel,source.fuel,x=>JSON.stringify([x.d,x.odo,x.l,x.price||0])).sort((a,b)=>(a.odo||0)-(b.odo||0));
+ result.trips=mergeList(result.trips,source.trips,x=>JSON.stringify([x.d,x.km,x.max,x.secs])).sort((a,b)=>(a.d||'').localeCompare(b.d||''));
+ Object.keys(source.docs).forEach(k=>{if(source.docs[k])result.docs[k]=source.docs[k]});
+ Object.keys(source.bike).forEach(k=>{const v=source.bike[k];if(v&&!(k==='model'&&v==='Hero Xpulse 200 4V'))result.bike[k]=v});
+ Object.keys(source.spec).forEach(k=>{if(source.spec[k]!=null&&source.spec[k]!=='')result.spec[k]=source.spec[k]});
+ return result}
+function load(){let s=null;try{s=JSON.parse(localStorage.getItem(KEY))}catch(e){console.error('No se pudieron leer los datos guardados:',e)}
+ if(!s){const b=fresh();try{const o=JSON.parse(localStorage.getItem('xpulse-tracker-v1'));if(o){['odo','hist','docs','fuel','trips'].forEach(k=>{if(o[k]!=null)b[k]=o[k]});Object.keys(o.items||{}).forEach(id=>{if(b.items[id]&&o.items[id].last>0)b.items[id].last=o.items[id].last})}}catch(e){console.error('No se pudieron migrar los datos locales anteriores:',e)}return normalizeState(b)}
+ return normalizeState(s)}
+let S=load(),tab='estado';
+function save(){
+ try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){console.error('No se pudo guardar una copia local:',e);cloud.status='error';cloud.message='No se pudo guardar una copia local: '+e.message}
+ cloud.revision++;if(cloud.session&&cloud.loaded)scheduleSync()}
+function cloudUrl(path){return cloud.config.url.replace(/\/+$/,'')+path}
+async function supaRequest(path,options,token){
+ const headers=Object.assign({'apikey':cloud.config.anonKey,'Authorization':'Bearer '+(token||cloud.config.anonKey)},options&&options.headers||{});
+ if(options&&options.body)headers['Content-Type']='application/json';
+ const response=await fetch(cloudUrl(path),Object.assign({},options||{},{headers}));
+ const text=await response.text();let data=null;try{data=text?JSON.parse(text):null}catch(e){data=text}
+ if(!response.ok){const message=data&&(data.msg||data.message||data.error_description||data.error)||'Error HTTP '+response.status;throw new Error(message)}
+ return data}
+function storeSession(session){
+ if(!session||!session.access_token)throw new Error('Supabase no devolvió una sesión válida.');
+ if(!session.expires_at)session.expires_at=Math.floor(Date.now()/1000)+(session.expires_in||3600);
+ cloud.session=session;
+ try{localStorage.setItem(CLOUD_SESSION_KEY,JSON.stringify(session))}catch(e){throw new Error('No se pudo guardar la sesión en este dispositivo: '+e.message)}
+}
+async function refreshSession(){
+ if(!cloud.session)return;
+ if(cloud.session.expires_at>Date.now()/1000+60)return;
+ if(!cloud.session.refresh_token)throw new Error('La sesión expiró. Inicia sesión de nuevo.');
+ const result=await supaRequest('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:cloud.session.refresh_token})},cloud.config.anonKey);
+ storeSession(result)}
+async function cloudRequest(path,options){
+ await refreshSession();
+ return supaRequest(path,options,cloud.session&&cloud.session.access_token)}
+function scheduleSync(){
+ clearTimeout(cloud.timer);cloud.status='pending';cloud.message='Cambios guardados en este dispositivo; sincronizando…';renderAccount();
+ cloud.timer=setTimeout(()=>syncNow().catch(e=>console.error('No se pudo sincronizar con Supabase:',e)),500)}
+async function syncNow(){
+ clearTimeout(cloud.timer);if(!cloud.session||!cloud.loaded)return;
+ if(cloud.syncPromise)return cloud.syncPromise;
+ cloud.syncPromise=(async()=>{cloud.status='syncing';cloud.message='Sincronizando datos con Supabase…';renderAccount();
+  try{while(cloud.session&&cloud.syncedRevision<cloud.revision){
+   await refreshSession();const revision=cloud.revision,snapshot=JSON.stringify(S),userId=cloud.session.user&&cloud.session.user.id;
+   if(!userId)throw new Error('La sesión no contiene un usuario válido.');
+   await cloudRequest('/rest/v1/mototracker_data?on_conflict=user_id',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:userId,data:JSON.parse(snapshot),updated_at:new Date().toISOString()})});
+   cloud.syncedRevision=revision}
+   cloud.status='synced';cloud.message='Sincronizado con Supabase. Los datos están disponibles al iniciar sesión desde otro dispositivo.'}
+  catch(e){cloud.status='error';cloud.message='Error al sincronizar: '+e.message;throw e}
+  finally{cloud.syncPromise=null;renderAccount();if(cloud.session&&cloud.syncedRevision<cloud.revision)scheduleSync()}})();
+ return cloud.syncPromise}
+async function loadCloudData(){
+ cloud.loaded=false;cloud.status='loading';cloud.message='Cargando tus datos de Supabase…';renderAccount();
+ try{
+  await refreshSession();const userId=cloud.session.user&&cloud.session.user.id;
+  if(!userId)throw new Error('La sesión no contiene un usuario válido.');
+  const rows=await cloudRequest('/rest/v1/mototracker_data?select=data&user_id=eq.'+encodeURIComponent(userId)+'&limit=1',{method:'GET'});
+  cloud.loaded=true;
+  if(Array.isArray(rows)&&rows.length){const remote=normalizeState(rows[0].data);S=mergeStates(remote,S);cloud.revision++;
+   try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){console.error('No se pudo guardar la copia local descargada:',e)}
+   if(JSON.stringify(S)!==JSON.stringify(remote)){cloud.syncedRevision=cloud.revision-1;await syncNow();return}
+   cloud.syncedRevision=cloud.revision;cloud.status='synced';cloud.message='Datos cargados y sincronizados con Supabase.';render();return}
+  cloud.revision++;await syncNow()
+ }catch(e){cloud.loaded=false;cloud.status='error';cloud.message='No se pudieron cargar los datos de Supabase: '+e.message;renderAccount();throw e}}
+function renderAccount(){
+ const el=$('#account');if(!el)return;
+ const notice=`<p id="cloudStatus" class="account-status ${esc(cloud.status)}" role="status">${esc(cloud.message||'Los cambios se guardan en este dispositivo.')}</p>`;
+ const configForm=`<label for="supabaseUrl">URL del proyecto Supabase</label><input id="supabaseUrl" type="url" placeholder="https://tu-proyecto.supabase.co" value="${esc(cloud.config.url||'')}">
+ <label for="supabaseKey">Clave anon / publishable</label><input id="supabaseKey" type="password" autocomplete="off" placeholder="sb_publishable_… o anon key" value="${esc(cloud.config.anonKey||'')}">
+ <p class="sub">Usa solo la clave pública anon/publishable; nunca una clave service_role.</p><button class="sm" onclick="saveCloudConfig()">Guardar configuración</button>`;
+ if(!cloud.config.url||!cloud.config.anonKey){el.innerHTML=`<div class="card"><div class="row"><span class="n">Conectar Supabase</span><span class="tag c-prev">CONFIGURACIÓN</span></div><p class="sub">Configura tu proyecto para sincronizar y consultar tus datos desde otros dispositivos.</p>${configForm}${notice}</div>`;return}
+ const settings=`<details><summary class="sub">Configuración del proyecto</summary>${configForm}</details>`;
+ if(!cloud.session){el.innerHTML=`<div class="card"><div class="row"><span class="n">Cuenta compartida</span><span class="tag c-prev">SIN SESIÓN</span></div>
+  <p class="sub">Crea la cuenta una sola vez y usa el mismo correo y contraseña en los demás dispositivos.</p>
+  <label for="accountEmail">Correo electrónico</label><input id="accountEmail" type="email" autocomplete="username" value="${esc(cloud.email)}">
+  <label for="accountPassword">Contraseña</label><input id="accountPassword" type="password" autocomplete="current-password">
+  <div class="account-actions"><button class="sm" onclick="accountAuth('login')">Iniciar sesión</button><button class="sm ghost" onclick="accountAuth('signup')">Crear cuenta</button></div>${settings}${notice}</div>`;return}
+ const email=cloud.session.user&&cloud.session.user.email||'Sesión activa';
+ el.innerHTML=`<div class="card"><div class="row"><span class="n">Supabase · ${esc(email)}</span><span class="tag ${cloud.status==='error'?'c-crit':'c-info'}">${cloud.status==='synced'?'SINCRONIZADO':cloud.status==='error'?'ERROR':'ACTIVO'}</span></div>
+  <div class="account-actions"><button class="sm ghost" onclick="retryCloud()">Sincronizar ahora</button><button class="sm ghost" onclick="logoutCloud()">Cerrar sesión</button></div>${settings}${notice}</div>`}
+function retryCloud(){if(cloud.loaded)syncNow().catch(e=>console.error('No se pudo sincronizar con Supabase:',e));else loadCloudData().catch(e=>console.error('No se pudieron cargar los datos de Supabase:',e))}
+function saveCloudConfig(){
+ const url=$('#supabaseUrl').value.trim().replace(/\/+$/,''),anonKey=$('#supabaseKey').value.trim();
+ let parsed;try{parsed=new URL(url)}catch(e){return alert('Ingresa una URL de proyecto Supabase válida.')}
+ if(!['https:','http:'].includes(parsed.protocol)||parsed.protocol==='http:'&&!['localhost','127.0.0.1'].includes(parsed.hostname))return alert('La URL de Supabase debe usar HTTPS.');
+ if(!anonKey)return alert('Ingresa la clave pública anon/publishable del proyecto.');
+ const changed=url!==cloud.config.url||anonKey!==cloud.config.anonKey;
+ cloud.config={url,anonKey};
+ try{localStorage.setItem(CLOUD_CONFIG_KEY,JSON.stringify(cloud.config))}catch(e){cloud.status='error';cloud.message='No se pudo guardar la configuración: '+e.message;renderAccount();return}
+ if(changed){cloud.session=null;cloud.loaded=false;cloud.status='offline';cloud.message='Configuración guardada. Inicia sesión para sincronizar.';try{localStorage.removeItem(CLOUD_SESSION_KEY)}catch(e){console.error('No se pudo quitar la sesión anterior:',e)}}
+ renderAccount()}
+async function accountAuth(action){
+ const email=$('#accountEmail').value.trim(),password=$('#accountPassword').value;cloud.email=email;
+ if(!email||!password){alert('Ingresa tu correo y contraseña.');return}
+ if(password.length<6){alert('La contraseña debe tener al menos 6 caracteres.');return}
+ cloud.status='loading';cloud.message=action==='signup'?'Creando cuenta…':'Iniciando sesión…';renderAccount();
+ try{
+  const result=await supaRequest(action==='signup'?'/auth/v1/signup':'/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email,password})},cloud.config.anonKey);
+  if(!result.access_token){cloud.status='offline';cloud.message='Cuenta creada. Confirma el correo electrónico y luego inicia sesión.';renderAccount();return}
+  storeSession(result);cloud.email='';cloud.revision=0;cloud.syncedRevision=0;await loadCloudData()
+ }catch(e){cloud.status='error';cloud.message='No se pudo '+(action==='signup'?'crear la cuenta: ':'iniciar sesión: ')+e.message;renderAccount()}}
+async function logoutCloud(){
+ try{if(cloud.session&&cloud.loaded)await syncNow()}catch(e){cloud.message='No se cerró la sesión porque hay cambios pendientes que no se pudieron sincronizar: '+e.message;renderAccount();return}
+ try{if(cloud.session)await cloudRequest('/auth/v1/logout',{method:'POST'})}catch(e){console.error('No se pudo cerrar la sesión en Supabase:',e)}
+ cloud.session=null;cloud.loaded=false;cloud.revision=0;cloud.syncedRevision=0;
+ try{localStorage.removeItem(CLOUD_SESSION_KEY)}catch(e){console.error('No se pudo quitar la sesión local:',e)}
+ cloud.status='offline';cloud.message='Sesión cerrada en este dispositivo; los datos locales se conservan.';renderAccount()}
+async function initCloud(){
+ if(!cloud.config.url||!cloud.config.anonKey){cloud.status='offline';cloud.message='Tus datos se guardan en este dispositivo. Configura Supabase para sincronizarlos.';renderAccount();return}
+ if(!cloud.session){cloud.status='offline';cloud.message='Inicia sesión con la cuenta compartida para sincronizar tus datos.';renderAccount();return}
+ try{await loadCloudData()}catch(e){console.error('No se pudo iniciar la sincronización:',e)}}
+const spec=k=>(S.spec[k]!=null&&S.spec[k]!=='')?S.spec[k]:DEF[k];
+const tank=()=>parseFloat(String(spec('tank')).replace(',','.'))||13;
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=s=>document.querySelector(s);
+const fmt=n=>Math.round(n).toLocaleString('es-CO');
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const today=()=>iso(new Date());
+const addD=(s,n)=>{const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);return iso(d)};
+function status(i){const it=S.items[i.id],last=it.last,base=last==null?0:last,
+ next=last==null?(i.first!=null?i.first:it.int):last+it.int,total=Math.max(1,next-base),rem=next-S.odo,
+ pct=Math.max(0,Math.min(100,(S.odo-base)/total*100));
+ let f=rem/total,lvl=rem<=0||f<=.1?'crit':f<=.25?'prev':'info';
+ let msg=rem>0?`próximo en ${fmt(rem)} km (a los ${fmt(next)})`:`vencido hace ${fmt(-rem)} km`;
+ if(i.days&&it.date){const dl=days(addD(it.date,i.days)),tl=dl<=0||dl<=7?'crit':dl<=21?'prev':'info';f=Math.min(f,dl/i.days);
+  if(tl=='crit'||(tl=='prev'&&lvl=='info'))lvl=tl;msg+=dl>0?` · o en ${dl} días`:' · vencido por fecha'}
+ return{rem,pct,lvl,msg,score:f}}
+const LBL={crit:'[CRÍTICO]',prev:'[PREVENTIVO]',info:'[INFORMATIVO]'};
+function blocks(p){const f=Math.round(p/10);return'█'.repeat(f)+'░'.repeat(10-f)}
+function days(d){return Math.ceil((new Date(d+'T00:00:00')-new Date(today()+'T00:00:00'))/864e5)}
+function render(){
+ renderAccount();$('#odoH').textContent=fmt(S.odo);updHdr();
+ $('#nav').innerHTML=NAV.map(n=>`<button aria-current="${tab==n[0]}" onclick="go('${n[0]}')"><span>${n[1]}</span>${n[2]}${n[0]=='ruta'&&T.on?' <i class="live"></i>':''}</button>`).join('');
+ $('#v').innerHTML=({estado:vEstado,ruta:vRuta,reg:vReg,docs:vDocs,fuel:vFuel,cfg:vCfg})[tab]();
+ window.scrollTo(0,0);if(tab=='ruta')updTrip()}
+function go(t){tab=t;render()}
+function updHdr(){$('#hSub').textContent=[S.bike.model||'Mi moto',S.bike.apodo?'“'+S.bike.apodo+'”':'',S.bike.placa].filter(Boolean).join(' · ')}
+function alerts(){const a=[];
+ if(S.odo<500)a.push(['prev',`Rodaje: evita acelerar a fondo y las arrancadas bruscas hasta los 500 km (${fmt(S.odo)}/500).`]);
+ if(S.odo<1500)a.push(['info','Revisa la tensión de los radios y la alineación de las ruedas: se aflojan en los primeros 1.000 km.']);
+ return a}
+function card(r){return`<div class="card"><div class="row"><span class="n">${r.i.n}</span><span class="tag c-${r.lvl}">${LBL[r.lvl]}</span></div>
+ <div class="bar"><i class="${r.lvl}" style="width:${r.pct}%"></i></div>
+ <div class="txt">${blocks(r.pct)} ${Math.round(r.pct)}% · ${r.msg}</div>
+ <div class="row" style="margin-top:10px;align-items:flex-start"><span class="sub">${r.i.t}</span><button class="sm ghost" onclick="quick('${r.i.id}')">✓ Hecho</button></div></div>`}
+function quick(id){S.items[id].last=S.odo;S.items[id].date=today();S.hist.push({d:today(),id,km:S.odo,cost:0});save();render()}
+function vEstado(){
+ const rows=ITEMS.map(i=>({i,...status(i)})).sort((a,b)=>a.score-b.score);
+ const c={crit:0,prev:0,info:0};rows.forEach(r=>c[r.lvl]++);
+ const dl=DOCS.filter(d=>S.docs[d.id]&&days(S.docs[d.id])<=30).length;
+ const need=rows.filter(r=>r.lvl!='info'),ok=rows.filter(r=>r.lvl=='info');
+ const q=[['Aceite',spec('aceite')],['Llantas',spec('presD')+' del. · '+spec('presT')+' tras.'],['Cadena',spec('cadena')],['Bujía',spec('bujia')+' · '+spec('bujiaGap')]];
+ return`<div class="pills"><div><b class="c-crit">${c.crit}</b><small>Críticos</small></div><div><b class="c-prev">${c.prev}</b><small>Preventivos</small></div><div><b class="c-info">${c.info}</b><small>Al día</small></div></div>
+ ${dl?`<div class="card" style="margin-top:12px"><span class="tag c-prev">[PREVENTIVO]</span> ${dl} documento(s) vencen en 30 días o menos. <a href="#" onclick="go('docs');return false">Ver legales</a></div>`:''}
+ <div style="margin-top:12px">${alerts().map(a=>`<div class="card"><span class="tag c-${a[0]}">${LBL[a[0]]}</span> ${a[1]}</div>`).join('')}</div>
+ <div class="grid">${q.map(x=>`<div class="card kv">${x[0]}<b>${esc(x[1])}</b></div>`).join('')}</div>
+ ${need.length?`<h2>Requiere atención</h2>`+need.map(card).join(''):''}
+ <h2>Al día</h2>`+Object.keys(G).map(g=>{const l=ok.filter(r=>r.i.g==g);return l.length?`<h3>${G[g]}</h3>`+l.map(card).join(''):''}).join('')}
+function vReg(){
+ const h=S.hist.slice(-8).reverse();const tot=S.hist.reduce((a,x)=>a+(x.cost||0),0);
+ return`<h2>Registrar mantenimiento</h2><div class="card">
+ <label for="rs">Servicio realizado</label><select id="rs">${ITEMS.map(i=>`<option value="${i.id}">${i.n}</option>`).join('')}</select>
+ <label for="rk">Odómetro (km)</label><input id="rk" type="number" inputmode="numeric" min="0" value="${S.odo}">
+ <label for="rc">Costo en COP (opcional)</label><input id="rc" type="number" inputmode="numeric" min="0" placeholder="0">
+ <p class="sub" style="margin-top:10px">Usa siempre partes genuinas Hero.</p>
+ <button onclick="doReg()">Registrar servicio</button></div>
+ <h2>Historial</h2><p class="sub">Gasto total: <b>$${fmt(tot)}</b></p>`+
+ (h.length?h.map(x=>`<div class="card"><div class="row"><span class="n">${(ITEMS.find(i=>i.id==x.id)||{n:x.id}).n}</span><span class="sub">${x.d}</span></div><div class="sub">${fmt(x.km)} km${x.cost?` · $${fmt(x.cost)}`:''}</div></div>`).join(''):'<p class="empty">Aún no hay servicios. Registra el primero arriba.</p>')}
+function doReg(){const id=$('#rs').value,km=+$('#rk').value,cost=+$('#rc').value||0;
+ if(!(km>=0)||$('#rk').value==='')return alert('Ingresa el kilometraje del odómetro.');
+ if(km>S.odo)S.odo=km;S.items[id].last=km;S.items[id].date=today();S.hist.push({d:today(),id,km,cost});save();tab='estado';render()}
+function vDocs(){
+ return`<h2>Documentos y legales</h2>`+DOCS.map(d=>{const v=S.docs[d.id],n=v?days(v):null;
+ const lvl=n===null?'':n<=7?'crit':n<=30?'prev':'info';
+ const msg=n===null?'Sin fecha registrada':n<0?`Vencido hace ${-n} días`:n===0?'Vence hoy':`Vence en ${n} días`;
+ return`<div class="card"><div class="row"><span class="n">${d.n}</span>${lvl?`<span class="tag c-${lvl}">${LBL[lvl]}</span>`:''}</div>
+ <div class="sub" style="margin-top:4px">${msg}</div>
+ <label for="d_${d.id}">Fecha de vencimiento</label><input id="d_${d.id}" type="date" value="${v||''}" onchange="setDoc('${d.id}',this.value)"></div>`}).join('')+
+ `<p class="sub">Alertas: 30 días (preventivo), 15 y 7 días (crítico a 7 o menos).</p>`}
+function setDoc(id,v){S.docs[id]=v||undefined;save();render()}
+function fuelStats(){const f=[...S.fuel].sort((a,b)=>a.odo-b.odo);const out=[];
+ for(let i=1;i<f.length;i++){const km=f[i].odo-f[i-1].odo;if(km>0&&f[i].l>0)out.push({...f[i],kmL:km/f[i].l,km})}
+ const km=out.reduce((a,x)=>a+x.km,0),l=out.reduce((a,x)=>a+x.l,0);
+ return{rows:out.reverse(),avg:l?km/l:0,last:out.length?out[0].kmL:0}}
+function vFuel(){const s=fuelStats();
+ const cost=S.fuel.reduce((a,x)=>a+(x.l*x.price||0),0);
+ return`<h2>Combustible</h2><div class="grid"><div class="card"><div class="big">${s.last?s.last.toFixed(1):'–'}</div><div class="sub">km/L último</div></div>
+ <div class="card"><div class="big">${s.avg?s.avg.toFixed(1):'–'}</div><div class="sub">km/L promedio</div></div></div>
+ <div class="card"><label for="fl">Litros tanqueados (máx. ${tank()})</label><input id="fl" type="number" inputmode="decimal" step="0.01" min="0" max="${tank()}">
+ <label for="fp">Precio por litro (COP)</label><input id="fp" type="number" inputmode="numeric" min="0">
+ <label for="fo">Odómetro (km)</label><input id="fo" type="number" inputmode="numeric" min="0" value="${S.odo}">
+ <p class="sub" style="margin-top:10px">Tanquea siempre hasta llenar para que el rendimiento sea exacto.</p>
+ <button onclick="doFuel()">Registrar tanqueo</button></div>
+ <p class="sub">Gasto total en combustible: <b>$${fmt(cost)}</b></p>
+ <h2>Rendimiento por tanqueo</h2>`+(s.rows.length?s.rows.slice(0,8).map(x=>`<div class="card row"><span class="n">${x.km} km · ${x.l} L</span><span class="big" style="font-size:24px">${x.kmL.toFixed(1)} km/L</span></div>`).join(''):'<p class="empty">Registra dos tanqueos para ver el rendimiento.</p>')}
+function doFuel(){const l=+$('#fl').value,p=+$('#fp').value||0,o=+$('#fo').value;
+ if(!(l>0)||l>tank())return alert('Ingresa litros entre 0 y '+tank()+' (capacidad del tanque).');
+ if(!(o>=0)||$('#fo').value==='')return alert('Ingresa el kilometraje del odómetro.');
+ if(o>S.odo)S.odo=o;S.fuel.push({d:today(),odo:o,l,price:p});save();render()}
+function vCfg(){
+ const inp=(id,l,v,fn,t)=>`<label for="${id}">${l}</label><input id="${id}" type="${t||'text'}" value="${esc(v)}" onchange="${fn}">`;
+ return`<h2>Ficha de la moto</h2><div class="card" style="padding-top:2px">`+BIKE.map(f=>inp('b_'+f[0],f[1],S.bike[f[0]],`setBike('${f[0]}',this.value)`,f[2])).join('')+`</div>
+ <h2>Odómetro</h2><div class="card"><label for="co" style="margin-top:0">Odómetro actual (km)</label><input id="co" type="number" inputmode="decimal" min="0" value="${S.odo}"><button onclick="setOdo()">Actualizar odómetro</button></div>
+ <h2>Especificaciones</h2><p class="sub" style="margin-bottom:10px">Valores del manual. Edítalos si cambias llantas, aceite o bujía.</p>`+
+ SPECS.map((g,gi)=>`<details class="card"${gi?'':' open'}><summary>${g[0]}</summary>`+g[1].map(f=>inp('s_'+f[0],f[1],spec(f[0]),`setSpec('${f[0]}',this.value)`)).join('')+`</details>`).join('')+
+ `<button class="ghost" onclick="if(confirm('¿Restaurar las especificaciones del manual?')){S.spec={};save();render()}">Restaurar valores del manual</button>
+ <h2>Puntos de atención</h2><div class="card"><ul>${ATT.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+ <h2>Intervalos</h2><details class="card"><summary>Editar intervalos (km)</summary>`+ITEMS.map(i=>inp('i_'+i.id,i.n,S.items[i.id].int,`setInt('${i.id}',this.value)`,'number')).join('')+`</details>
+ <h2>Datos</h2><button class="ghost" onclick="exp()">Exportar copia (JSON)</button><button class="ghost" onclick="if(confirm('¿Borrar todos los datos?')){localStorage.removeItem(KEY);S=load();render()}">Borrar todo</button>`}
+function setBike(k,v){S.bike[k]=v;save();updHdr()}
+function setSpec(k,v){S.spec[k]=v.trim();save()}
+function setOdo(){const v=parseFloat($('#co').value);if(!(v>=0))return;S.odo=v;save();tab='estado';render()}
+function setInt(id,v){v=+v;if(v>0){S.items[id].int=v;save()}}
+function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:'application/json'}));a.download='xpulse-tracker.json';a.click()}
+
+/* ===== Trip computer GPS ===== */
+let T={on:false,done:false,dist:0,max:0,secs:0,speed:0,acc:null,last:null,wid:null,tid:null,t0:0,msg:'',wl:null};
+const fmtT=s=>{const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h+':'+String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+function hav(a,b){const R=6371000,r=Math.PI/180,dLa=(b.latitude-a.latitude)*r,dLo=(b.longitude-a.longitude)*r;
+ const x=Math.sin(dLa/2)**2+Math.cos(a.latitude*r)*Math.cos(b.latitude*r)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+async function lockScreen(){try{if('wakeLock' in navigator)T.wl=await navigator.wakeLock.request('screen')}catch(e){}}
+function unlockScreen(){try{T.wl&&T.wl.release()}catch(e){}T.wl=null}
+document.addEventListener('visibilitychange',()=>{if(T.on&&document.visibilityState==='visible')lockScreen()});
+function startTrip(){
+ if(!navigator.geolocation){T.msg='Este navegador no tiene GPS disponible.';return updTrip()}
+ Object.assign(T,{on:true,done:false,dist:0,max:0,secs:0,speed:0,acc:null,last:null,t0:Date.now(),msg:'Buscando señal GPS…'});
+ T.wid=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+ T.tid=setInterval(()=>{T.secs=Math.floor((Date.now()-T.t0)/1000);updTrip()},1000);
+ lockScreen();render()}
+function onErr(e){T.msg=e.code==1?'Permiso de ubicación denegado. Actívalo para este sitio en el navegador y en los ajustes del teléfono.':e.code==2?'Sin señal GPS. Busca un lugar despejado.':'La señal tarda en llegar, sigo intentando…';
+ if(e.code==1)stopTrip(true);updTrip()}
+function onPos(p){
+ const c=p.coords;T.acc=c.accuracy;
+ if(c.accuracy>30){T.msg='Señal débil (±'+Math.round(c.accuracy)+' m). Esperando mejor precisión…';return updTrip()}
+ T.msg='';let v=(c.speed!=null&&!isNaN(c.speed))?c.speed:null;
+ if(T.last){const dt=(p.timestamp-T.last.t)/1000,d=hav(T.last,c);if(v===null)v=dt>0?d/dt:0;
+  if(v>=70){T.last={latitude:c.latitude,longitude:c.longitude,t:p.timestamp};return}
+  if(v>=0.8&&d>=2)T.dist+=d}
+ v=v===null?0:v;T.speed=v<0.8?0:v*3.6;T.max=Math.max(T.max,T.speed);
+ T.last={latitude:c.latitude,longitude:c.longitude,t:p.timestamp};updTrip()}
+function stopTrip(silent){
+ if(T.wid!=null)navigator.geolocation.clearWatch(T.wid);clearInterval(T.tid);unlockScreen();
+ T.on=false;T.wid=null;T.speed=0;T.done=T.dist>=10;if(!T.done&&!silent)T.msg='Recorrido muy corto para sumar (menos de 10 m).';render()}
+function discardTrip(){T.done=false;T.dist=0;T.max=0;T.secs=0;T.msg='';render()}
+function addTrip(){const km=T.dist/1000;S.odo=Math.round((S.odo+km)*10)/10;
+ S.trips.push({d:today(),km:+km.toFixed(1),max:Math.round(T.max),secs:T.secs});save();
+ T.done=false;T.dist=0;T.max=0;T.secs=0;T.msg='';tab='estado';render()}
+function updTrip(){if(tab!='ruta')return;const g=i=>document.getElementById(i);if(!g('tSpd'))return;
+ g('tSpd').textContent=Math.round(T.speed);g('tDist').textContent=(T.dist/1000).toFixed(1);g('tMax').textContent=Math.round(T.max);g('tTime').textContent=fmtT(T.secs);
+ g('tMsg').textContent=T.msg||(T.on&&T.acc!=null?'GPS activo · precisión ±'+Math.round(T.acc)+' m':'')}
+function vRuta(){
+ const live=T.on||T.done,km=(T.dist/1000).toFixed(1);
+ const panel=`<div class="spd"><span id="tSpd">0</span><small>km/h</small></div>
+ <div class="gps sub" id="tMsg" role="status"></div>
+ <div class="stats"><div><b id="tDist">0.0</b><small>Distancia km</small></div><div><b id="tMax">0</b><small>Vel. máx. km/h</small></div><div><b id="tTime">0:00:00</b><small>Tiempo en ruta</small></div></div>`;
+ const tr=S.trips.slice(-5).reverse();
+ return`<h2>Odómetro de ruta GPS</h2>`+(live?panel:`<div class="card"><p>Monta el celular en el manubrio y presiona iniciar. Usa el GPS del teléfono: sin datos móviles ni suscripciones.</p><p class="sub" style="margin-top:8px">Mantén esta pantalla abierta durante el recorrido. Si el teléfono se bloquea, el navegador puede pausar el GPS.</p><div class="gps sub" id="tMsg" role="status">${T.msg}</div></div>`)+
+ (T.on?`<button onclick="stopTrip()">■ Detener ruta</button>`:T.done?`<button onclick="addTrip()">Sumar al Odómetro (+${km} km)</button><button class="ghost" onclick="discardTrip()">Descartar recorrido</button>`:`<button onclick="startTrip()">▶ Iniciar Ruta GPS en Vivo</button>`)+
+ (tr.length?`<h2>Últimas rutas</h2>`+tr.map(x=>`<div class="card row"><span class="n">${x.km} km · ${fmtT(x.secs)}</span><span class="sub">máx. ${x.max} km/h · ${x.d}</span></div>`).join(''):'')}
+render();initCloud();
+</script>
+</body>
+</html>
