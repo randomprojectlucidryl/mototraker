@@ -38,6 +38,8 @@ h2{font:700 26px "Open Sans",sans-serif;margin:22px 0 10px}
 .sub{color:var(--mute);font-size:14px}
 label{display:block;font-size:14px;color:var(--mute);margin:12px 0 4px}
 input,select{width:100%;font:500 17px "Open Sans",sans-serif;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+input[type=checkbox]{width:auto;accent-color:var(--acc)}
+.check-label{display:flex;align-items:center;gap:8px;color:var(--ink);font-weight:600}
 button{font:600 17px "Open Sans",sans-serif;border:0;border-radius:8px;padding:13px 16px;background:var(--acc);color:#fff;width:100%;margin-top:16px;cursor:pointer}
 button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 button.sm{width:auto;margin:0;padding:6px 10px;font-size:14px}
@@ -48,10 +50,13 @@ nav button{flex:1;min-width:0;margin:0;border-radius:0;background:none;color:#B8
 nav button span{font-size:20px}
 nav button[aria-current=true]{color:#fff;box-shadow:inset 0 3px 0 var(--acc)}
 @media(max-width:360px){nav button{font-size:10px;padding:10px 0}nav button span{font-size:17px}}
+@media(max-width:420px){.pills{flex-wrap:wrap}.pills button{flex:1 1 calc(50% - 4px)}}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .big{font:700 34px/1 "Open Sans",sans-serif}
 .pills{display:flex;gap:8px;margin:14px 0 0}
 .pills div{flex:1;background:var(--sf);border:1px solid var(--line);border-radius:var(--r);padding:10px;text-align:center}
+.pills button{flex:1;margin:0;background:var(--sf);border:1px solid var(--line);border-radius:var(--r);padding:10px;color:var(--ink)}
+.pills button[aria-pressed=true]{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
 .pills b{display:block;font:700 28px/1 "Open Sans",sans-serif}
 .pills small{color:var(--mute);font-size:13px}
 .empty{color:var(--mute);padding:18px 4px;text-align:center}
@@ -129,22 +134,24 @@ const BIKE=[['apodo','Apodo'],['model','Modelo'],['anio','Año modelo'],['color'
 const ATT=['Servicio pago cada 3.000 km o 90 días (lo que ocurra primero). El 1.er servicio va entre 500 y 750 km.','Rodaje: durante los primeros 500 km evita arrancar a fondo y acelerar bruscamente.','Usa aceite Hero Xotic+ 10W-30 SL MA2 (PAO) y repuestos originales Hero.','Si ruedas con polvo, humedad, lluvia o todoterreno, haz el servicio con más frecuencia (filtro de aire y cadena).','Tras usar todoterreno revisa radios, rodamientos de dirección, cadena y posapiés.','Cadena cada 700 km: holgura de 30–35 mm.','No mezcles líquido de frenos DOT 3 y DOT 4.','Cambia las llantas cuando aparezca el indicador de desgaste (mínimo 1,0 mm).','Al retirar empaques, juntas tóricas, anillos de seguridad o pasadores, instala unos nuevos.','Seca bien la moto después de lavarla (paño limpio o aire a presión).','El motor no arranca con el acelerador a fondo: la ECU corta el combustible.'];
 const DOCS=[{id:'soat',n:'SOAT'},{id:'tecno',n:'Revisión tecnomecánica (CDA)'},{id:'todo',n:'Seguro todo riesgo'}];
 const NAV=[['estado','📊','Estado'],['ruta','🧭','Ruta'],['reg','🛠️','Reg.'],['docs','📄','Legal'],['fuel','⛽','Tanq.'],['cfg','🏍️','Moto']];
-const fresh=()=>{const items={};ITEMS.forEach(i=>items[i.id]={int:i.int,last:null,date:null});return{odo:0,items,hist:[],docs:{},fuel:[],trips:[],bike:{model:'Hero Xpulse 200 4V'},spec:{}}};
+const fresh=()=>{const items={};ITEMS.forEach(i=>items[i.id]={int:i.int,last:null,date:null});return{odo:0,items,hist:[],docs:{},fuel:[],trips:[],bike:{model:'Hero Xpulse 200 4V'},spec:{},gpsKeepAwake:true,gpsKeepAwakeSet:false}};
+function legacyRecordId(x,index){const source=JSON.stringify([x.d,x.id,x.km,x.cost||0,index]);let hash=0;for(let i=0;i<source.length;i++)hash=(Math.imul(hash,31)+source.charCodeAt(i))|0;return'legacy-'+index+'-'+(hash>>>0).toString(36)}
 function readStored(key,fallback){try{const value=localStorage.getItem(key);return value?JSON.parse(value):fallback}catch(e){console.error('No se pudo leer el almacenamiento local:',e);return fallback}}
 function normalizeState(s){const b=fresh();if(!s||typeof s!=='object')return b;
  const m=Object.assign(b,s);m.items=Object.assign({},b.items,s.items||{});
  Object.keys(b.items).forEach(id=>m.items[id]=Object.assign({},b.items[id],s.items&&s.items[id]||{}));
  m.bike=Object.assign({},b.bike,s.bike||{});m.docs=s.docs&&typeof s.docs==='object'?s.docs:{};
- m.spec=s.spec&&typeof s.spec==='object'?s.spec:{};m.hist=Array.isArray(s.hist)?s.hist:[];m.fuel=Array.isArray(s.fuel)?s.fuel:[];m.trips=Array.isArray(s.trips)?s.trips:[];m.odo=Number.isFinite(+s.odo)&&+s.odo>=0?+s.odo:0;return m}
+ m.spec=s.spec&&typeof s.spec==='object'?s.spec:{};m.hist=Array.isArray(s.hist)?s.hist.map((record,index)=>{const x=record&&typeof record==='object'?record:{},uid=typeof x.uid==='string'&&/^[\w-]+$/.test(x.uid)?x.uid:legacyRecordId(x,index);return Object.assign({},x,{uid,order:Number.isFinite(+x.order)?+x.order:index})}):[];m.fuel=Array.isArray(s.fuel)?s.fuel:[];m.trips=Array.isArray(s.trips)?s.trips:[];m.gpsKeepAwake=s.gpsKeepAwake!==false;m.gpsKeepAwakeSet=s.gpsKeepAwakeSet===true;m.odo=Number.isFinite(+s.odo)&&+s.odo>=0?+s.odo:0;return m}
 function mergeStates(remote,local){
  const result=normalizeState(remote),source=normalizeState(local);result.odo=Math.max(result.odo,source.odo);
  for(const item of ITEMS){const r=result.items[item.id],l=source.items[item.id];
   if(l.last!=null&&(r.last==null||(l.date||'')>(r.date||'')||(l.date||'')===(r.date||'')&&l.last>r.last)){r.last=l.last;r.date=l.date}
   if(l.int!==item.int)r.int=l.int}
+ if(source.gpsKeepAwakeSet){result.gpsKeepAwake=source.gpsKeepAwake;result.gpsKeepAwakeSet=true}
  const mergeList=(a,b,key)=>{const all=new Map();[...a,...b].forEach(x=>all.set(key(x),x));return[...all.values()]};
- result.hist=mergeList(result.hist,source.hist,x=>JSON.stringify([x.d,x.id,x.km,x.cost||0])).sort((a,b)=>(a.d||'').localeCompare(b.d||''));
+ result.hist=mergeList(result.hist,source.hist,x=>x.uid||JSON.stringify([x.d,x.id,x.km,x.cost||0])).sort((a,b)=>(a.order||0)-(b.order||0)||(a.d||'').localeCompare(b.d||''));
  result.fuel=mergeList(result.fuel,source.fuel,x=>JSON.stringify([x.d,x.odo,x.l,x.price||0])).sort((a,b)=>(a.odo||0)-(b.odo||0));
- result.trips=mergeList(result.trips,source.trips,x=>JSON.stringify([x.d,x.km,x.max,x.secs])).sort((a,b)=>(a.d||'').localeCompare(b.d||''));
+ result.trips=mergeList(result.trips,source.trips,x=>JSON.stringify([x.d,x.km,x.max,x.secs,x.type||'gps'])).sort((a,b)=>(a.d||'').localeCompare(b.d||''));
  Object.keys(source.docs).forEach(k=>{if(source.docs[k])result.docs[k]=source.docs[k]});
  Object.keys(source.bike).forEach(k=>{const v=source.bike[k];if(v&&!(k==='model'&&v==='Hero Xpulse 200 4V'))result.bike[k]=v});
  Object.keys(source.spec).forEach(k=>{if(source.spec[k]!=null&&source.spec[k]!=='')result.spec[k]=source.spec[k]});
@@ -152,7 +159,7 @@ function mergeStates(remote,local){
 function load(){let s=null;try{s=JSON.parse(localStorage.getItem(KEY))}catch(e){console.error('No se pudieron leer los datos guardados:',e)}
  if(!s){const b=fresh();try{const o=JSON.parse(localStorage.getItem('xpulse-tracker-v1'));if(o){['odo','hist','docs','fuel','trips'].forEach(k=>{if(o[k]!=null)b[k]=o[k]});Object.keys(o.items||{}).forEach(id=>{if(b.items[id]&&o.items[id].last>0)b.items[id].last=o.items[id].last})}}catch(e){console.error('No se pudieron migrar los datos locales anteriores:',e)}return normalizeState(b)}
  return normalizeState(s)}
-let S=load(),tab='estado';
+let S=load(),tab='estado',stateFilter='all',editingRegId=null;
 function save(){
  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){console.error('No se pudo guardar una copia local:',e);cloud.status='error';cloud.message='No se pudo guardar una copia local: '+e.message}
  cloud.revision++;if(cloud.session&&cloud.loaded)scheduleSync()}
@@ -280,7 +287,7 @@ function status(i){const it=S.items[i.id],last=it.last,base=last==null?0:last,
  if(i.days&&it.date){const dl=days(addD(it.date,i.days)),tl=dl<=0||dl<=7?'crit':dl<=21?'prev':'info';f=Math.min(f,dl/i.days);
   if(tl=='crit'||(tl=='prev'&&lvl=='info'))lvl=tl;msg+=dl>0?` · o en ${dl} días`:' · vencido por fecha'}
  return{rem,pct,lvl,msg,score:f}}
-const LBL={crit:'[CRÍTICO]',prev:'[PREVENTIVO]',info:'[INFORMATIVO]'};
+const LBL={crit:'[CRÍTICO]',prev:'[PREVENTIVO]',info:'[AL DÍA]'};
 function blocks(p){const f=Math.round(p/10);return'█'.repeat(f)+'░'.repeat(10-f)}
 function days(d){return Math.ceil((new Date(d+'T00:00:00')-new Date(today()+'T00:00:00'))/864e5)}
 function render(){
@@ -302,32 +309,73 @@ function card(r){return`<div class="card"><div class="row"><span class="n">${r.i
  <div class="bar"><i class="${r.lvl}" style="width:${r.pct}%"></i></div>
  <div class="txt">${blocks(r.pct)} ${Math.round(r.pct)}% · ${r.msg}</div>
  <div class="row" style="margin-top:10px;align-items:flex-start"><span class="sub">${r.i.t}</span><button class="sm ghost" onclick="quick('${r.i.id}')">✓ Hecho</button></div></div>`}
-function quick(id){S.items[id].last=S.odo;S.items[id].date=today();S.hist.push({d:today(),id,km:S.odo,cost:0});save();render()}
+function quick(id){S.items[id].last=S.odo;S.items[id].date=today();S.hist.push({uid:newRecordId(),order:nextHistoryOrder(),d:today(),id,km:S.odo,cost:0});save();render()}
 function vEstado(){
  const rows=ITEMS.map(i=>({i,...status(i)})).sort((a,b)=>a.score-b.score);
  const c={crit:0,prev:0,info:0};rows.forEach(r=>c[r.lvl]++);
  const dl=DOCS.filter(d=>S.docs[d.id]&&days(S.docs[d.id])<=30).length;
- const need=rows.filter(r=>r.lvl!='info'),ok=rows.filter(r=>r.lvl=='info');
+ const visible=stateFilter==='all'?rows:rows.filter(r=>r.lvl===stateFilter);
+ const need=visible.filter(r=>r.lvl!='info'),ok=visible.filter(r=>r.lvl=='info');
  const q=[['Aceite',spec('aceite')],['Llantas',spec('presD')+' del. · '+spec('presT')+' tras.'],['Cadena',spec('cadena')],['Bujía',spec('bujia')+' · '+spec('bujiaGap')]];
- return`<div class="pills"><div><b class="c-crit">${c.crit}</b><small>Críticos</small></div><div><b class="c-prev">${c.prev}</b><small>Preventivos</small></div><div><b class="c-info">${c.info}</b><small>Al día</small></div></div>
+ return`<div class="pills"><button aria-pressed="${stateFilter==='all'}" onclick="filterState('all')"><b>${rows.length}</b><small>Todos</small></button><button class="c-crit" aria-pressed="${stateFilter==='crit'}" onclick="filterState('crit')"><b>${c.crit}</b><small>Críticos</small></button><button class="c-prev" aria-pressed="${stateFilter==='prev'}" onclick="filterState('prev')"><b>${c.prev}</b><small>Preventivos</small></button><button class="c-info" aria-pressed="${stateFilter==='info'}" onclick="filterState('info')"><b>${c.info}</b><small>Al día</small></button></div>
  ${dl?`<div class="card" style="margin-top:12px"><span class="tag c-prev">[PREVENTIVO]</span> ${dl} documento(s) vencen en 30 días o menos. <a href="#" onclick="go('docs');return false">Ver legales</a></div>`:''}
  <div style="margin-top:12px">${alerts().map(a=>`<div class="card"><span class="tag c-${a[0]}">${LBL[a[0]]}</span> ${a[1]}</div>`).join('')}</div>
  <div class="grid">${q.map(x=>`<div class="card kv">${x[0]}<b>${esc(x[1])}</b></div>`).join('')}</div>
  ${need.length?`<h2>Requiere atención</h2>`+need.map(card).join(''):''}
- <h2>Al día</h2>`+Object.keys(G).map(g=>{const l=ok.filter(r=>r.i.g==g);return l.length?`<h3>${G[g]}</h3>`+l.map(card).join(''):''}).join('')}
-function vReg(){
- const h=S.hist.slice(-8).reverse();const tot=S.hist.reduce((a,x)=>a+(x.cost||0),0);
- return`<h2>Registrar mantenimiento</h2><div class="card">
+ ${ok.length?`<h2>Al día</h2>`+Object.keys(G).map(g=>{const l=ok.filter(r=>r.i.g==g);return l.length?`<h3>${G[g]}</h3>`+l.map(card).join(''):''}).join(''):''}
+ ${visible.length?'':'<p class="empty">No hay mantenimientos en esta categoría.</p>'}
+ ${vReg('Registros de mantenimiento')}`}
+function filterState(value){stateFilter=value;render()}
+function vReg(title='Registrar mantenimiento'){
+ const h=S.hist.slice().sort((a,b)=>(b.order||0)-(a.order||0));const tot=S.hist.reduce((a,x)=>a+(x.cost||0),0);
+ return`<h2>${esc(title)}</h2><div class="card">
  <label for="rs">Servicio realizado</label><select id="rs">${ITEMS.map(i=>`<option value="${i.id}">${i.n}</option>`).join('')}</select>
  <label for="rk">Odómetro (km)</label><input id="rk" type="number" inputmode="numeric" min="0" value="${S.odo}">
  <label for="rc">Costo en COP (opcional)</label><input id="rc" type="number" inputmode="numeric" min="0" placeholder="0">
  <p class="sub" style="margin-top:10px">Usa siempre partes genuinas Hero.</p>
  <button onclick="doReg()">Registrar servicio</button></div>
  <h2>Historial</h2><p class="sub">Gasto total: <b>$${fmt(tot)}</b></p>`+
- (h.length?h.map(x=>`<div class="card"><div class="row"><span class="n">${(ITEMS.find(i=>i.id==x.id)||{n:x.id}).n}</span><span class="sub">${x.d}</span></div><div class="sub">${fmt(x.km)} km${x.cost?` · $${fmt(x.cost)}`:''}</div></div>`).join(''):'<p class="empty">Aún no hay servicios. Registra el primero arriba.</p>')}
+ (h.length?h.map((x,index)=>{const item=ITEMS.find(i=>i.id==x.id),name=item?item.n:x.id,uid=esc(x.uid);
+  if(editingRegId===x.uid)return`<div class="card"><label for="editService_${uid}">Servicio</label><select id="editService_${uid}">${ITEMS.map(i=>`<option value="${i.id}"${i.id===x.id?' selected':''}>${i.n}</option>`).join('')}</select>
+   <label for="editDate_${uid}">Fecha</label><input id="editDate_${uid}" type="date" value="${esc(x.d)}">
+   <label for="editKm_${uid}">Odómetro (km)</label><input id="editKm_${uid}" type="number" inputmode="numeric" min="0" value="${esc(x.km)}">
+   <label for="editCost_${uid}">Costo en COP</label><input id="editCost_${uid}" type="number" inputmode="numeric" min="0" value="${esc(x.cost||0)}">
+   <div class="account-actions"><button class="sm" onclick="saveReg('${uid}')">Guardar</button><button class="sm ghost" onclick="cancelEditReg()">Cancelar</button></div></div>`;
+  return`<div class="card"><div class="row"><span class="n">${esc(name)}</span><span class="sub">${esc(x.d)}</span></div><div class="sub">${fmt(+x.km||0)} km${x.cost?` · $${fmt(x.cost)}`:''}</div>
+   <div class="account-actions"><button class="sm ghost" aria-label="Mover arriba" title="Mover arriba" ${index===0?'disabled':''} onclick="moveReg('${uid}',-1)">↑</button><button class="sm ghost" aria-label="Mover abajo" title="Mover abajo" ${index===h.length-1?'disabled':''} onclick="moveReg('${uid}',1)">↓</button><button class="sm ghost" onclick="editReg('${uid}')">Editar</button><button class="sm ghost" onclick="deleteReg('${uid}')">Borrar</button></div></div>`}).join(''):'<p class="empty">Aún no hay servicios. Registra el primero arriba.</p>')}
+function newRecordId(){return typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'record-'+Date.now()+'-'+Math.random().toString(36).slice(2)}
+function nextHistoryOrder(){return S.hist.reduce((max,x)=>Math.max(max,+x.order||0),-1)+1}
+function setItemFromHistory(id,force){
+ const current=S.items[id],entries=S.hist.filter(x=>x.id===id).sort((a,b)=>(a.d||'').localeCompare(b.d||'')||(+a.km||0)-(+b.km||0)),latest=entries[entries.length-1];
+ if(force){current.last=latest?+latest.km:null;current.date=latest?latest.d:null;return}
+ if(latest&&(current.last==null||(latest.d||'')>(current.date||'')||(latest.d||'')===(current.date||'')&&(+latest.km||0)>current.last)){current.last=+latest.km;current.date=latest.d}
+}
 function doReg(){const id=$('#rs').value,km=+$('#rk').value,cost=+$('#rc').value||0;
- if(!(km>=0)||$('#rk').value==='')return alert('Ingresa el kilometraje del odómetro.');
- if(km>S.odo)S.odo=km;S.items[id].last=km;S.items[id].date=today();S.hist.push({d:today(),id,km,cost});save();tab='estado';render()}
+ if(!(km>=0)||$('#rk').value===''||!Number.isFinite(km))return alert('Ingresa el kilometraje del odómetro.');
+ if(!Number.isFinite(cost)||cost<0)return alert('Ingresa un costo válido.');
+ if(km>S.odo)S.odo=km;S.items[id].last=km;S.items[id].date=today();S.hist.push({uid:newRecordId(),order:nextHistoryOrder(),d:today(),id,km,cost});save();tab='estado';render()}
+function editReg(uid){editingRegId=uid;render()}
+function cancelEditReg(){editingRegId=null;render()}
+function saveReg(uid){
+ const x=S.hist.find(r=>r.uid===uid);if(!x)return alert('No se encontró el registro que quieres editar.');
+ const id=$('#editService_'+uid).value,d=$('#editDate_'+uid).value,km=+$('#editKm_'+uid).value,cost=+$('#editCost_'+uid).value;
+ if(!d||!Number.isFinite(new Date(d+'T00:00:00').getTime()))return alert('Ingresa una fecha válida.');
+ if($('#editKm_'+uid).value===''||!Number.isFinite(km)||km<0)return alert('Ingresa un kilometraje válido.');
+ if($('#editCost_'+uid).value===''||!Number.isFinite(cost)||cost<0)return alert('Ingresa un costo válido.');
+ const oldId=x.id,oldItem=S.items[oldId],oldWasCurrent=oldItem&&oldItem.last===+x.km&&oldItem.date===x.d;
+ Object.assign(x,{id,d,km,cost});if(oldId!==id&&oldWasCurrent)setItemFromHistory(oldId,true);
+ if(oldWasCurrent&&oldId===id)setItemFromHistory(id,true);else setItemFromHistory(id,false);
+ editingRegId=null;save();render()}
+function deleteReg(uid){
+ const index=S.hist.findIndex(x=>x.uid===uid);if(index<0)return alert('No se encontró el registro que quieres borrar.');
+ if(!confirm('¿Borrar este registro de mantenimiento?'))return;
+ const [x]=S.hist.splice(index,1),item=S.items[x.id],wasCurrent=item&&item.last===+x.km&&item.date===x.d;
+ if(wasCurrent)setItemFromHistory(x.id,true);if(editingRegId===uid)editingRegId=null;
+ save();render()}
+function moveReg(uid,direction){
+ const rows=S.hist.slice().sort((a,b)=>(b.order||0)-(a.order||0)),index=rows.findIndex(x=>x.uid===uid),next=index+direction;
+ if(index<0||next<0||next>=rows.length)return;
+ rows.splice(next,0,rows.splice(index,1)[0]);rows.forEach((x,i)=>x.order=rows.length-i);S.hist=rows;save();render()}
 function vDocs(){
  return`<h2>Documentos y legales</h2>`+DOCS.map(d=>{const v=S.docs[d.id],n=v?days(v):null;
  const lvl=n===null?'':n<=7?'crit':n<=30?'prev':'info';
@@ -368,24 +416,34 @@ function vCfg(){
  <h2>Datos</h2><button class="ghost" onclick="exp()">Exportar copia (JSON)</button><button class="ghost" onclick="if(confirm('¿Borrar todos los datos?')){localStorage.removeItem(KEY);S=load();render()}">Borrar todo</button>`}
 function setBike(k,v){S.bike[k]=v;save();updHdr()}
 function setSpec(k,v){S.spec[k]=v.trim();save()}
-function setOdo(){const v=parseFloat($('#co').value);if(!(v>=0))return;S.odo=v;save();tab='estado';render()}
+function setOdo(){const v=parseFloat($('#co').value);if(!(v>=0)||!Number.isFinite(v))return alert('Ingresa un kilometraje válido.');S.odo=v;save();tab='estado';render()}
 function setInt(id,v){v=+v;if(v>0){S.items[id].int=v;save()}}
 function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:'application/json'}));a.download='xpulse-tracker.json';a.click()}
 
 /* ===== Trip computer GPS ===== */
-let T={on:false,done:false,dist:0,max:0,secs:0,speed:0,acc:null,last:null,wid:null,tid:null,t0:0,msg:'',wl:null};
+let T={on:false,done:false,dist:0,max:0,secs:0,speed:0,acc:null,last:null,wid:null,tid:null,t0:0,msg:'',wakeMsg:'',wl:null};
 const fmtT=s=>{const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h+':'+String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
 function hav(a,b){const R=6371000,r=Math.PI/180,dLa=(b.latitude-a.latitude)*r,dLo=(b.longitude-a.longitude)*r;
  const x=Math.sin(dLa/2)**2+Math.cos(a.latitude*r)*Math.cos(b.latitude*r)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
-async function lockScreen(){try{if('wakeLock' in navigator)T.wl=await navigator.wakeLock.request('screen')}catch(e){}}
-function unlockScreen(){try{T.wl&&T.wl.release()}catch(e){}T.wl=null}
-document.addEventListener('visibilitychange',()=>{if(T.on&&document.visibilityState==='visible')lockScreen()});
+async function lockScreen(){
+ if(!S.gpsKeepAwake)return;
+ if(!('wakeLock' in navigator)){T.wakeMsg='Este navegador no permite mantener la pantalla encendida. El GPS con pantalla bloqueada no está garantizado.';return updTrip()}
+ try{T.wl=await navigator.wakeLock.request('screen');T.wakeMsg='Pantalla activa para mejorar la continuidad del GPS.'}
+ catch(e){T.wakeMsg='No se pudo mantener la pantalla encendida: '+e.message;console.error('No se pudo solicitar Wake Lock:',e)}
+ updTrip()}
+function unlockScreen(){
+ if(T.wl){try{T.wl.release().catch(e=>{T.wakeMsg='No se pudo liberar el bloqueo de pantalla: '+e.message;console.error('No se pudo liberar Wake Lock:',e)})}
+  catch(e){T.wakeMsg='No se pudo liberar el bloqueo de pantalla: '+e.message;console.error('No se pudo liberar Wake Lock:',e)}}
+ T.wl=null}
+function setKeepScreenAwake(enabled){S.gpsKeepAwake=enabled;S.gpsKeepAwakeSet=true;save();if(T.on){if(enabled)lockScreen();else{unlockScreen();T.wakeMsg='La pantalla puede bloquearse y el navegador podría pausar el GPS.';updTrip()}}}
+document.addEventListener('visibilitychange',()=>{if(T.on&&document.visibilityState==='visible'&&S.gpsKeepAwake)lockScreen()});
 function startTrip(){
  if(!navigator.geolocation){T.msg='Este navegador no tiene GPS disponible.';return updTrip()}
- Object.assign(T,{on:true,done:false,dist:0,max:0,secs:0,speed:0,acc:null,last:null,t0:Date.now(),msg:'Buscando señal GPS…'});
+ Object.assign(T,{on:true,done:false,dist:0,max:0,secs:0,speed:0,acc:null,last:null,t0:Date.now(),msg:'Buscando señal GPS…',wakeMsg:''});
  T.wid=navigator.geolocation.watchPosition(onPos,onErr,{enableHighAccuracy:true,maximumAge:0,timeout:20000});
  T.tid=setInterval(()=>{T.secs=Math.floor((Date.now()-T.t0)/1000);updTrip()},1000);
- lockScreen();render()}
+ if(S.gpsKeepAwake)lockScreen();else T.wakeMsg='La pantalla puede bloquearse y el navegador podría pausar el GPS.';
+ render()}
 function onErr(e){T.msg=e.code==1?'Permiso de ubicación denegado. Actívalo para este sitio en el navegador y en los ajustes del teléfono.':e.code==2?'Sin señal GPS. Busca un lugar despejado.':'La señal tarda en llegar, sigo intentando…';
  if(e.code==1)stopTrip(true);updTrip()}
 function onPos(p){
@@ -402,20 +460,28 @@ function stopTrip(silent){
  T.on=false;T.wid=null;T.speed=0;T.done=T.dist>=10;if(!T.done&&!silent)T.msg='Recorrido muy corto para sumar (menos de 10 m).';render()}
 function discardTrip(){T.done=false;T.dist=0;T.max=0;T.secs=0;T.msg='';render()}
 function addTrip(){const km=T.dist/1000;S.odo=Math.round((S.odo+km)*10)/10;
- S.trips.push({d:today(),km:+km.toFixed(1),max:Math.round(T.max),secs:T.secs});save();
+ S.trips.push({d:today(),km:+km.toFixed(1),max:Math.round(T.max),secs:T.secs,type:'gps'});save();
  T.done=false;T.dist=0;T.max=0;T.secs=0;T.msg='';tab='estado';render()}
-function updTrip(){if(tab!='ruta')return;const g=i=>document.getElementById(i);if(!g('tSpd'))return;
- g('tSpd').textContent=Math.round(T.speed);g('tDist').textContent=(T.dist/1000).toFixed(1);g('tMax').textContent=Math.round(T.max);g('tTime').textContent=fmtT(T.secs);
- g('tMsg').textContent=T.msg||(T.on&&T.acc!=null?'GPS activo · precisión ±'+Math.round(T.acc)+' m':'')}
+function addManualTrip(){
+ const field=$('#manualKm'),km=+field.value;if(field.value===''||!Number.isFinite(km)||km<=0)return alert('Ingresa una distancia recorrida mayor que 0 km.');
+ S.odo=Math.round((S.odo+km)*10)/10;S.trips.push({d:today(),km:+km.toFixed(1),max:0,secs:0,type:'manual'});save();render()}
+function updTrip(){if(tab!='ruta')return;const g=i=>document.getElementById(i),message=g('tMsg'),wake=g('tWake');
+ if(message)message.textContent=T.msg||(T.on&&T.acc!=null?'GPS activo · precisión ±'+Math.round(T.acc)+' m':'');
+ if(wake)wake.textContent=T.wakeMsg;
+ if(!g('tSpd'))return;
+ g('tSpd').textContent=Math.round(T.speed);g('tDist').textContent=(T.dist/1000).toFixed(1);g('tMax').textContent=Math.round(T.max);g('tTime').textContent=fmtT(T.secs)}
 function vRuta(){
  const live=T.on||T.done,km=(T.dist/1000).toFixed(1);
  const panel=`<div class="spd"><span id="tSpd">0</span><small>km/h</small></div>
  <div class="gps sub" id="tMsg" role="status"></div>
+ <div class="gps sub" id="tWake" role="status">${esc(T.wakeMsg)}</div>
  <div class="stats"><div><b id="tDist">0.0</b><small>Distancia km</small></div><div><b id="tMax">0</b><small>Vel. máx. km/h</small></div><div><b id="tTime">0:00:00</b><small>Tiempo en ruta</small></div></div>`;
  const tr=S.trips.slice(-5).reverse();
- return`<h2>Odómetro de ruta GPS</h2>`+(live?panel:`<div class="card"><p>Monta el celular en el manubrio y presiona iniciar. Usa el GPS del teléfono: sin datos móviles ni suscripciones.</p><p class="sub" style="margin-top:8px">Mantén esta pantalla abierta durante el recorrido. Si el teléfono se bloquea, el navegador puede pausar el GPS.</p><div class="gps sub" id="tMsg" role="status">${T.msg}</div></div>`)+
+ return`<h2>Odómetro de ruta</h2><div class="card"><label class="check-label"><input type="checkbox" ${S.gpsKeepAwake?'checked':''} onchange="setKeepScreenAwake(this.checked)"> Mantener pantalla encendida durante la ruta</label>
+ <p class="sub" style="margin-top:8px">El GPS con pantalla bloqueada no está garantizado en una aplicación web: el navegador o el sistema pueden suspender la ubicación. Esta opción evita el bloqueo automático cuando el dispositivo lo admite.</p></div>`+(live?panel:`<div class="card"><p>Monta el celular en el manubrio y presiona iniciar. Usa el GPS del teléfono: sin datos móviles ni suscripciones.</p><div class="gps sub" id="tMsg" role="status">${esc(T.msg)}</div><div class="gps sub" id="tWake" role="status">${esc(T.wakeMsg)}</div></div>`)+
  (T.on?`<button onclick="stopTrip()">■ Detener ruta</button>`:T.done?`<button onclick="addTrip()">Sumar al Odómetro (+${km} km)</button><button class="ghost" onclick="discardTrip()">Descartar recorrido</button>`:`<button onclick="startTrip()">▶ Iniciar Ruta GPS en Vivo</button>`)+
- (tr.length?`<h2>Últimas rutas</h2>`+tr.map(x=>`<div class="card row"><span class="n">${x.km} km · ${fmtT(x.secs)}</span><span class="sub">máx. ${x.max} km/h · ${x.d}</span></div>`).join(''):'')}
+ `<h2>Registrar kilómetros manuales</h2><div class="card"><p class="sub">Usa esto si el GPS no funcionó. La distancia se suma al odómetro actual y queda guardada como ruta manual.</p><label for="manualKm">Kilómetros recorridos</label><input id="manualKm" type="number" inputmode="decimal" min="0.1" step="0.1" placeholder="Ej. 25.5"><button onclick="addManualTrip()">Sumar kilómetros manuales</button></div>`+
+ (tr.length?`<h2>Últimas rutas</h2>`+tr.map(x=>`<div class="card row"><span class="n">${x.km} km · ${x.type==='manual'?'Manual':'GPS'}</span><span class="sub">${x.type==='manual'?'':'máx. '+x.max+' km/h · '}${esc(x.d)}</span></div>`).join(''):'')}
 render();initCloud();
 </script>
 </body>
