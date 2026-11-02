@@ -134,19 +134,49 @@ const BIKE=[['apodo','Apodo'],['model','Modelo'],['anio','Año modelo'],['color'
 const ATT=['Servicio pago cada 3.000 km o 90 días (lo que ocurra primero). El 1.er servicio va entre 500 y 750 km.','Rodaje: durante los primeros 500 km evita arrancar a fondo y acelerar bruscamente.','Usa aceite Hero Xotic+ 10W-30 SL MA2 (PAO) y repuestos originales Hero.','Si ruedas con polvo, humedad, lluvia o todoterreno, haz el servicio con más frecuencia (filtro de aire y cadena).','Tras usar todoterreno revisa radios, rodamientos de dirección, cadena y posapiés.','Cadena cada 700 km: holgura de 30–35 mm.','No mezcles líquido de frenos DOT 3 y DOT 4.','Cambia las llantas cuando aparezca el indicador de desgaste (mínimo 1,0 mm).','Al retirar empaques, juntas tóricas, anillos de seguridad o pasadores, instala unos nuevos.','Seca bien la moto después de lavarla (paño limpio o aire a presión).','El motor no arranca con el acelerador a fondo: la ECU corta el combustible.'];
 const DOCS=[{id:'soat',n:'SOAT'},{id:'tecno',n:'Revisión tecnomecánica (CDA)'},{id:'todo',n:'Seguro todo riesgo'}];
 const NAV=[['estado','📊','Estado'],['ruta','🧭','Ruta'],['reg','🛠️','Reg.'],['docs','📄','Legal'],['fuel','⛽','Tanq.'],['cfg','🏍️','Moto']];
-const fresh=()=>{const items={};ITEMS.forEach(i=>items[i.id]={int:i.int,last:null,date:null});return{odo:0,items,hist:[],docs:{},fuel:[],trips:[],bike:{model:'Hero Xpulse 200 4V'},spec:{},gpsKeepAwake:true,gpsKeepAwakeSet:false}};
+const fresh=()=>{const items={};ITEMS.forEach(i=>items[i.id]={int:i.int,last:null,date:null});return{odo:0,items,hist:[],docs:{},fuel:[],trips:[],bike:{model:'Hero Xpulse 200 4V'},spec:{},customItems:[],cardEdits:{},cardHidden:{},cardOrder:[],gpsKeepAwake:true,gpsKeepAwakeSet:false}};
 function legacyRecordId(x,index){const source=JSON.stringify([x.d,x.id,x.km,x.cost||0,index]);let hash=0;for(let i=0;i<source.length;i++)hash=(Math.imul(hash,31)+source.charCodeAt(i))|0;return'legacy-'+index+'-'+(hash>>>0).toString(36)}
 function readStored(key,fallback){try{const value=localStorage.getItem(key);return value?JSON.parse(value):fallback}catch(e){console.error('No se pudo leer el almacenamiento local:',e);return fallback}}
+function normalizeCardDefinition(x){
+ if(!x||typeof x!=='object'||typeof x.id!=='string'||!/^[\w-]+$/.test(x.id)||!['mot','tra','fre','rue','ele'].includes(x.g)||typeof x.n!=='string'||!x.n.trim())return null;
+ const int=+x.int,first=x.first==null||x.first===''?null:+x.first,daysLimit=+x.days;
+ if(!Number.isFinite(int)||int<=0||first!==null&&(!Number.isFinite(first)||first<0)||!Number.isFinite(daysLimit)||daysLimit<0)return null;
+ return{id:x.id,g:x.g,n:x.n.trim().slice(0,100),int,first,days:daysLimit,t:String(x.t||'').trim().slice(0,500)}
+}
+function allItems(includeHidden=false){
+ const builtins=ITEMS.map(item=>Object.assign({},item,S.cardEdits[item.id]||{}));
+ const items=[...builtins,...S.customItems];
+ return includeHidden?items:items.filter(item=>S.cardHidden[item.id]!==true)
+}
+function orderedCardIds(){
+ const ids=allItems(true).map(item=>item.id);
+ return[...S.cardOrder.filter(id=>ids.includes(id)),...ids.filter(id=>!S.cardOrder.includes(id))]
+}
 function normalizeState(s){const b=fresh();if(!s||typeof s!=='object')return b;
  const m=Object.assign(b,s);m.items=Object.assign({},b.items,s.items||{});
  Object.keys(b.items).forEach(id=>m.items[id]=Object.assign({},b.items[id],s.items&&s.items[id]||{}));
+ m.customItems=(Array.isArray(s.customItems)?s.customItems:[]).map(normalizeCardDefinition).filter(item=>item&&!ITEMS.some(base=>base.id===item.id));
+ m.customItems.forEach(i=>m.items[i.id]=Object.assign({int:i.int,last:null,date:null},s.items&&s.items[i.id]||{}));
+ m.cardEdits={};
+ Object.keys(s.cardEdits&&typeof s.cardEdits==='object'?s.cardEdits:{}).forEach(id=>{
+  const base=ITEMS.find(item=>item.id===id),edit=s.cardEdits[id];
+  if(!base||!edit||typeof edit!=='object')return;
+  const normalized=normalizeCardDefinition(Object.assign({},base,edit,{id}));
+  if(normalized)m.cardEdits[id]=normalized
+ });
+ m.cardHidden=s.cardHidden&&typeof s.cardHidden==='object'?s.cardHidden:{};
+ m.cardOrder=Array.isArray(s.cardOrder)?s.cardOrder.filter(id=>typeof id==='string'):[];
  m.bike=Object.assign({},b.bike,s.bike||{});m.docs=s.docs&&typeof s.docs==='object'?s.docs:{};
  m.spec=s.spec&&typeof s.spec==='object'?s.spec:{};m.hist=Array.isArray(s.hist)?s.hist.map((record,index)=>{const x=record&&typeof record==='object'?record:{},uid=typeof x.uid==='string'&&/^[\w-]+$/.test(x.uid)?x.uid:legacyRecordId(x,index);return Object.assign({},x,{uid,order:Number.isFinite(+x.order)?+x.order:index})}):[];m.fuel=Array.isArray(s.fuel)?s.fuel:[];m.trips=Array.isArray(s.trips)?s.trips:[];m.gpsKeepAwake=s.gpsKeepAwake!==false;m.gpsKeepAwakeSet=s.gpsKeepAwakeSet===true;m.odo=Number.isFinite(+s.odo)&&+s.odo>=0?+s.odo:0;return m}
 function mergeStates(remote,local){
  const result=normalizeState(remote),source=normalizeState(local);result.odo=Math.max(result.odo,source.odo);
- for(const item of ITEMS){const r=result.items[item.id],l=source.items[item.id];
+ const customById=new Map(result.customItems.map(x=>[x.id,x]));source.customItems.forEach(x=>customById.set(x.id,x));result.customItems=[...customById.values()];
+ result.cardEdits=Object.assign({},result.cardEdits,source.cardEdits);result.cardHidden=Object.assign({},result.cardHidden,source.cardHidden);
+ const order=[...source.cardOrder,...result.cardOrder];result.cardOrder=order.filter((id,index)=>order.indexOf(id)===index);
+ for(const id of new Set([...Object.keys(result.items),...Object.keys(source.items)])){const r=result.items[id]||(result.items[id]={int:0,last:null,date:null}),l=source.items[id];
+  if(!l)continue;
   if(l.last!=null&&(r.last==null||(l.date||'')>(r.date||'')||(l.date||'')===(r.date||'')&&l.last>r.last)){r.last=l.last;r.date=l.date}
-  if(l.int!==item.int)r.int=l.int}
+  if(l.int!==r.int)r.int=l.int}
  if(source.gpsKeepAwakeSet){result.gpsKeepAwake=source.gpsKeepAwake;result.gpsKeepAwakeSet=true}
  const mergeList=(a,b,key)=>{const all=new Map();[...a,...b].forEach(x=>all.set(key(x),x));return[...all.values()]};
  result.hist=mergeList(result.hist,source.hist,x=>x.uid||JSON.stringify([x.d,x.id,x.km,x.cost||0])).sort((a,b)=>(a.order||0)-(b.order||0)||(a.d||'').localeCompare(b.d||''));
@@ -159,7 +189,7 @@ function mergeStates(remote,local){
 function load(){let s=null;try{s=JSON.parse(localStorage.getItem(KEY))}catch(e){console.error('No se pudieron leer los datos guardados:',e)}
  if(!s){const b=fresh();try{const o=JSON.parse(localStorage.getItem('xpulse-tracker-v1'));if(o){['odo','hist','docs','fuel','trips'].forEach(k=>{if(o[k]!=null)b[k]=o[k]});Object.keys(o.items||{}).forEach(id=>{if(b.items[id]&&o.items[id].last>0)b.items[id].last=o.items[id].last})}}catch(e){console.error('No se pudieron migrar los datos locales anteriores:',e)}return normalizeState(b)}
  return normalizeState(s)}
-let S=load(),tab='estado',stateFilter='all',editingRegId=null;
+let S=load(),tab='estado',stateFilter='all',editingRegId=null,editingCardId=null;
 function save(){
  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){console.error('No se pudo guardar una copia local:',e);cloud.status='error';cloud.message='No se pudo guardar una copia local: '+e.message}
  cloud.revision++;if(cloud.session&&cloud.loaded)scheduleSync()}
@@ -305,13 +335,17 @@ function alerts(){const a=[];
  if(S.odo<500)a.push(['prev',`Rodaje: evita acelerar a fondo y las arrancadas bruscas hasta los 500 km (${fmt(S.odo)}/500).`]);
  if(S.odo<1500)a.push(['info','Revisa la tensión de los radios y la alineación de las ruedas: se aflojan en los primeros 1.000 km.']);
  return a}
-function card(r){return`<div class="card"><div class="row"><span class="n">${r.i.n}</span><span class="tag c-${r.lvl}">${LBL[r.lvl]}</span></div>
+function card(r,list,section){if(editingCardId===r.i.id)return cardForm(r.i,false);
+ const index=list.findIndex(x=>x.i.id===r.i.id);
+ return`<div class="card"><div class="row"><span class="n">${esc(r.i.n)}</span><span class="sub">${esc(G[r.i.g])}</span><span class="tag c-${r.lvl}">${LBL[r.lvl]}</span></div>
  <div class="bar"><i class="${r.lvl}" style="width:${r.pct}%"></i></div>
- <div class="txt">${blocks(r.pct)} ${Math.round(r.pct)}% · ${r.msg}</div>
- <div class="row" style="margin-top:10px;align-items:flex-start"><span class="sub">${r.i.t}</span><button class="sm ghost" onclick="quick('${r.i.id}')">✓ Hecho</button></div></div>`}
+ <div class="txt">${blocks(r.pct)} ${Math.round(r.pct)}% · ${esc(r.msg)}</div>
+ <div class="row" style="margin-top:10px;align-items:flex-start"><span class="sub">${esc(r.i.t)}</span><button class="sm ghost" onclick="quick('${r.i.id}')">✓ Hecho</button></div>
+ <div class="account-actions"><button class="sm ghost" aria-label="Mover arriba" ${index<=0?'disabled':''} onclick="moveCard('${r.i.id}',-1,'${section}')">↑</button><button class="sm ghost" aria-label="Mover abajo" ${index<0||index>=list.length-1?'disabled':''} onclick="moveCard('${r.i.id}',1,'${section}')">↓</button><button class="sm ghost" onclick="editCard('${r.i.id}')">Editar</button><button class="sm ghost" onclick="hideCard('${r.i.id}')">Eliminar</button></div></div>`}
 function quick(id){S.items[id].last=S.odo;S.items[id].date=today();S.hist.push({uid:newRecordId(),order:nextHistoryOrder(),d:today(),id,km:S.odo,cost:0});save();render()}
 function vEstado(){
- const rows=ITEMS.map(i=>({i,...status(i)})).sort((a,b)=>a.score-b.score);
+ const order=new Map(orderedCardIds().map((id,index)=>[id,index]));
+ const rows=allItems().map(i=>({i,...status(i)})).sort((a,b)=>order.get(a.i.id)-order.get(b.i.id));
  const c={crit:0,prev:0,info:0};rows.forEach(r=>c[r.lvl]++);
  const dl=DOCS.filter(d=>S.docs[d.id]&&days(S.docs[d.id])<=30).length;
  const visible=stateFilter==='all'?rows:rows.filter(r=>r.lvl===stateFilter);
@@ -321,22 +355,82 @@ function vEstado(){
  ${dl?`<div class="card" style="margin-top:12px"><span class="tag c-prev">[PREVENTIVO]</span> ${dl} documento(s) vencen en 30 días o menos. <a href="#" onclick="go('docs');return false">Ver legales</a></div>`:''}
  <div style="margin-top:12px">${alerts().map(a=>`<div class="card"><span class="tag c-${a[0]}">${LBL[a[0]]}</span> ${a[1]}</div>`).join('')}</div>
  <div class="grid">${q.map(x=>`<div class="card kv">${x[0]}<b>${esc(x[1])}</b></div>`).join('')}</div>
- ${need.length?`<h2>Requiere atención</h2>`+need.map(card).join(''):''}
- ${ok.length?`<h2>Al día</h2>`+Object.keys(G).map(g=>{const l=ok.filter(r=>r.i.g==g);return l.length?`<h3>${G[g]}</h3>`+l.map(card).join(''):''}).join(''):''}
+ ${need.length?`<h2>Requiere atención</h2>`+need.map(r=>card(r,need,'need')).join(''):''}
+ ${ok.length?`<h2>Al día</h2>`+ok.map(r=>card(r,ok,'ok')).join(''):''}
  ${visible.length?'':'<p class="empty">No hay mantenimientos en esta categoría.</p>'}
+ ${cardManager()}
  ${vReg('Registros de mantenimiento')}`}
 function filterState(value){stateFilter=value;render()}
+function cardForm(item,creating){
+ const prefix=creating?'newCard':'editCard',field=(name,label,value,type='text',extra='')=>`<label for="${prefix}_${name}">${label}</label><input id="${prefix}_${name}" type="${type}" value="${esc(value)}" ${extra}`;
+ const groups=Object.keys(G).map(id=>`<option value="${id}"${item.g===id?' selected':''}>${G[id]}</option>`).join('');
+ return`<div class="card"><h3>${creating?'Nueva tarjeta de mantenimiento':'Editar tarjeta de mantenimiento'}</h3>
+ ${field('name','Nombre',item.n)}
+ <label for="${prefix}_group">Categoría</label><select id="${prefix}_group">${groups}</select>
+ ${field('interval','Intervalo (km)',S.items[item.id]?S.items[item.id].int:item.int,'number','min="1" step="1"')}
+ ${field('first','Primer vencimiento (km, opcional)',item.first==null?'':item.first,'number','min="0" step="1"')}
+ ${field('days','Intervalo por días (0 para desactivar)',item.days||0,'number','min="0" step="1"')}
+ <label for="${prefix}_note">Nota</label><input id="${prefix}_note" type="text" value="${esc(item.t)}" maxlength="500">
+ ${field('last','Último servicio (km, opcional)',S.items[item.id]&&S.items[item.id].last!=null?S.items[item.id].last:'','number','min="0" step="0.1"')}
+ ${field('date','Fecha del último servicio (opcional)',S.items[item.id]&&S.items[item.id].date||'','date')}
+ <div class="account-actions"><button class="sm" onclick="${creating?'createCard()':`saveCard('${item.id}')`}">${creating?'Crear tarjeta':'Guardar cambios'}</button>${creating?'':`<button class="sm ghost" onclick="cancelEditCard()">Cancelar</button>`}</div></div>`
+}
+function cardManager(){
+ const hidden=allItems(true).filter(item=>S.cardHidden[item.id]===true);
+ return`<h2>Tarjetas de mantenimiento</h2><p class="sub">Edita las tarjetas del Estado, cambia su orden o elimínalas de la vista. Las eliminadas se conservan y se pueden restaurar.</p>
+ <details class="card"><summary>Crear tarjeta de mantenimiento</summary>${cardForm({id:'',g:'mot',n:'',int:3000,first:null,days:0,t:''},true)}</details>
+ ${hidden.length?`<details class="card"><summary>Tarjetas eliminadas (${hidden.length})</summary>${hidden.map(item=>`<div class="row" style="margin-top:10px"><span class="n">${esc(item.n)}</span><button class="sm ghost" onclick="restoreCard('${item.id}')">Restaurar</button></div>`).join('')}</details>`:''}`
+}
+function editCard(id){editingCardId=id;render()}
+function cancelEditCard(){editingCardId=null;render()}
+function readCardForm(prefix,id){
+ const n=$('#'+prefix+'_name').value.trim(),g=$('#'+prefix+'_group').value,int=+$('#'+prefix+'_interval').value;
+ const firstValue=$('#'+prefix+'_first').value,first=firstValue===''?null:+firstValue,daysValue=$('#'+prefix+'_days').value,daysLimit=+daysValue;
+ const t=$('#'+prefix+'_note').value.trim(),lastValue=$('#'+prefix+'_last').value,last=lastValue===''?null:+lastValue,date=$('#'+prefix+'_date').value;
+ if(!n)return alert('Ingresa el nombre de la tarjeta.'),null;
+ if(!Number.isFinite(int)||int<=0)return alert('Ingresa un intervalo válido mayor que 0 km.'),null;
+ if(first!==null&&(!Number.isFinite(first)||first<0))return alert('Ingresa un primer vencimiento válido.'),null;
+ if(daysValue===''||!Number.isFinite(daysLimit)||daysLimit<0)return alert('Ingresa un intervalo por días válido (0 para desactivarlo).'),null;
+ if(last!==null&&(!Number.isFinite(last)||last<0))return alert('Ingresa un kilometraje válido para el último servicio.'),null;
+ if(date&&!Number.isFinite(new Date(date+'T00:00:00').getTime()))return alert('Ingresa una fecha válida.'),null;
+ return normalizeCardDefinition({id,g,n,int,first,days:daysLimit,t})
+}
+function createCard(){
+ const item=readCardForm('newCard','custom-'+newRecordId());if(!item)return;
+ if(allItems(true).some(existing=>existing.id===item.id))return alert('Ya existe una tarjeta con ese identificador.');
+ S.cardOrder=orderedCardIds();S.customItems.push(item);S.items[item.id]={int:item.int,last:$('#newCard_last').value===''?null:+$('#newCard_last').value,date:$('#newCard_date').value||null};
+ S.cardHidden[item.id]=false;S.cardOrder.push(item.id);save();render()}
+function saveCard(id){
+ const item=readCardForm('editCard',id);if(!item)return;
+ const custom=S.customItems.findIndex(x=>x.id===id);
+ if(custom>=0)S.customItems[custom]=item;else S.cardEdits[id]=item;
+ const current=S.items[id];current.int=item.int;
+ current.last=$('#editCard_last').value===''?null:+$('#editCard_last').value;
+ current.date=$('#editCard_date').value||null;
+ editingCardId=null;save();render()}
+function hideCard(id){
+ if(!confirm('¿Eliminar esta tarjeta de Estado? Se conservarán sus datos y podrás restaurarla después.'))return;
+ S.cardHidden[id]=true;if(editingCardId===id)editingCardId=null;save();render()}
+function restoreCard(id){S.cardHidden[id]=false;save();render()}
+function moveCard(id,direction,section){
+ const item=allItems().find(x=>x.id===id);if(!item)return;
+ const candidates=allItems().filter(x=>{const level=status(x).lvl,visible=stateFilter==='all'||stateFilter===level;return visible&&(section==='need'?level!=='info':level==='info')});
+ const order=orderedCardIds();
+ const group=order.filter(itemId=>candidates.some(x=>x.id===itemId)),index=group.indexOf(id),next=index+direction;
+ if(index<0||next<0||next>=group.length)return;
+ const first=order.indexOf(group[index]),second=order.indexOf(group[next]);[order[first],order[second]]=[order[second],order[first]];
+ S.cardOrder=order;save();render()}
 function vReg(title='Registrar mantenimiento'){
  const h=S.hist.slice().sort((a,b)=>(b.order||0)-(a.order||0));const tot=S.hist.reduce((a,x)=>a+(x.cost||0),0);
  return`<h2>${esc(title)}</h2><div class="card">
- <label for="rs">Servicio realizado</label><select id="rs">${ITEMS.map(i=>`<option value="${i.id}">${i.n}</option>`).join('')}</select>
+ <label for="rs">Servicio realizado</label><select id="rs">${allItems(true).map(i=>`<option value="${i.id}">${esc(i.n)}</option>`).join('')}</select>
  <label for="rk">Odómetro (km)</label><input id="rk" type="number" inputmode="numeric" min="0" value="${S.odo}">
  <label for="rc">Costo en COP (opcional)</label><input id="rc" type="number" inputmode="numeric" min="0" placeholder="0">
  <p class="sub" style="margin-top:10px">Usa siempre partes genuinas Hero.</p>
  <button onclick="doReg()">Registrar servicio</button></div>
  <h2>Historial</h2><p class="sub">Gasto total: <b>$${fmt(tot)}</b></p>`+
- (h.length?h.map((x,index)=>{const item=ITEMS.find(i=>i.id==x.id),name=item?item.n:x.id,uid=esc(x.uid);
-  if(editingRegId===x.uid)return`<div class="card"><label for="editService_${uid}">Servicio</label><select id="editService_${uid}">${ITEMS.map(i=>`<option value="${i.id}"${i.id===x.id?' selected':''}>${i.n}</option>`).join('')}</select>
+ (h.length?h.map((x,index)=>{const item=allItems(true).find(i=>i.id==x.id),name=item?item.n:x.id,uid=esc(x.uid);
+  if(editingRegId===x.uid)return`<div class="card"><label for="editService_${uid}">Servicio</label><select id="editService_${uid}">${allItems(true).map(i=>`<option value="${i.id}"${i.id===x.id?' selected':''}>${esc(i.n)}</option>`).join('')}</select>
    <label for="editDate_${uid}">Fecha</label><input id="editDate_${uid}" type="date" value="${esc(x.d)}">
    <label for="editKm_${uid}">Odómetro (km)</label><input id="editKm_${uid}" type="number" inputmode="numeric" min="0" value="${esc(x.km)}">
    <label for="editCost_${uid}">Costo en COP</label><input id="editCost_${uid}" type="number" inputmode="numeric" min="0" value="${esc(x.cost||0)}">
@@ -412,12 +506,12 @@ function vCfg(){
  SPECS.map((g,gi)=>`<details class="card"${gi?'':' open'}><summary>${g[0]}</summary>`+g[1].map(f=>inp('s_'+f[0],f[1],spec(f[0]),`setSpec('${f[0]}',this.value)`)).join('')+`</details>`).join('')+
  `<button class="ghost" onclick="if(confirm('¿Restaurar las especificaciones del manual?')){S.spec={};save();render()}">Restaurar valores del manual</button>
  <h2>Puntos de atención</h2><div class="card"><ul>${ATT.map(x=>`<li>${x}</li>`).join('')}</ul></div>
- <h2>Intervalos</h2><details class="card"><summary>Editar intervalos (km)</summary>`+ITEMS.map(i=>inp('i_'+i.id,i.n,S.items[i.id].int,`setInt('${i.id}',this.value)`,'number')).join('')+`</details>
+ <h2>Intervalos</h2><details class="card"><summary>Editar intervalos (km)</summary>`+allItems(true).map(i=>inp('i_'+i.id,i.n,S.items[i.id].int,`setInt('${i.id}',this.value)`,'number')).join('')+`</details>
  <h2>Datos</h2><button class="ghost" onclick="exp()">Exportar copia (JSON)</button><button class="ghost" onclick="if(confirm('¿Borrar todos los datos?')){localStorage.removeItem(KEY);S=load();render()}">Borrar todo</button>`}
 function setBike(k,v){S.bike[k]=v;save();updHdr()}
 function setSpec(k,v){S.spec[k]=v.trim();save()}
 function setOdo(){const v=parseFloat($('#co').value);if(!(v>=0)||!Number.isFinite(v))return alert('Ingresa un kilometraje válido.');S.odo=v;save();tab='estado';render()}
-function setInt(id,v){v=+v;if(v>0){S.items[id].int=v;save()}}
+function setInt(id,v){v=+v;if(v>0){S.items[id].int=v;const custom=S.customItems.find(item=>item.id===id);if(custom)custom.int=v;else if(S.cardEdits[id])S.cardEdits[id].int=v;save()}}
 function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:'application/json'}));a.download='xpulse-tracker.json';a.click()}
 
 /* ===== Trip computer GPS ===== */
